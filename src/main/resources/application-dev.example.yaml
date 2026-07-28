@@ -1,0 +1,17 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ats_system
+    username: postgres
+    password: CHANGE_ME
+
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    com.yasarbilgi.ats: DEBUG
+    org.hibernate.SQL: DEBUG
