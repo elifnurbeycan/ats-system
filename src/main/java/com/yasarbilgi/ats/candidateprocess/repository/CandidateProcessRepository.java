@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
+import java.util.List;
 
 public interface CandidateProcessRepository
         extends JpaRepository<CandidateProcess, Long> {
@@ -32,5 +33,11 @@ public interface CandidateProcessRepository
             Long positionId,
             Long currentStageId,
             Pageable pageable
+    );
+
+    List<CandidateProcess> findAllByCompanyIdAndPositionIdAndPipelineIdAndActiveTrue(
+            Long companyId,
+            Long positionId,
+            Long pipelineId
     );
 }

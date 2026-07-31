@@ -1,6 +1,7 @@
 package com.yasarbilgi.ats.pipeline.repository;
 
 import com.yasarbilgi.ats.pipeline.entity.PipelineStage;
+import com.yasarbilgi.ats.pipeline.entity.PipelineStageType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -8,6 +9,19 @@ import java.util.Optional;
 
 public interface PipelineStageRepository
         extends JpaRepository<PipelineStage, Long> {
+
+    Optional<PipelineStage> findByCompanyIdAndPipelineIdAndId(
+            Long companyId,
+            Long pipelineId,
+            Long stageId
+    );
+
+    Optional<PipelineStage>
+    findFirstByCompanyIdAndPipelineIdAndStageTypeAndActiveTrueOrderByDisplayOrderAsc(
+            Long companyId,
+            Long pipelineId,
+            PipelineStageType stageType
+    );
 
     // Şirkete ve pipeline'a ait aşamayı benzersiz koduna göre getirir.
     Optional<PipelineStage> findByCompanyIdAndPipelineIdAndCode(
