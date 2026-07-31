@@ -9,6 +9,8 @@ import java.util.Optional;
 
 public interface PositionRepository extends JpaRepository<Position, Long> {
 
+    Optional<Position> findByCompanyIdAndId(Long companyId, Long positionId);
+
     // Şirkete ait pozisyonu benzersiz pozisyon koduna göre getirir.
     Optional<Position> findByCompanyIdAndCode(Long companyId, String code);
 

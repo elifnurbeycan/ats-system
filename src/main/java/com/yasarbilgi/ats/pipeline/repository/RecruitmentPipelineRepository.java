@@ -9,6 +9,11 @@ import java.util.Optional;
 public interface RecruitmentPipelineRepository
         extends JpaRepository<RecruitmentPipeline, Long> {
 
+    Optional<RecruitmentPipeline> findByCompanyIdAndId(
+            Long companyId,
+            Long pipelineId
+    );
+
     // Şirkete ait pipeline'ı benzersiz koduna göre getirir.
     Optional<RecruitmentPipeline> findByCompanyIdAndCode(
             Long companyId,
