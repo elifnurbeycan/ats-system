@@ -2,6 +2,7 @@ package com.yasarbilgi.ats.position.repository;
 
 import com.yasarbilgi.ats.position.entity.Position;
 import com.yasarbilgi.ats.position.entity.PositionStatus;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -28,4 +29,12 @@ public interface PositionRepository extends JpaRepository<Position, Long> {
             Long companyId,
             Long departmentId
     );
+
+    // Şirkete ait aktif pozisyonları departman bilgisiyle birlikte getirir.
+    @EntityGraph(attributePaths = "department")
+    List<Position> findAllByCompanyIdAndActiveTrueOrderByTitleAsc(Long companyId);
+
+    // Şirkete ait aktif ve pasif tüm pozisyonları departman bilgisiyle birlikte getirir.
+    @EntityGraph(attributePaths = "department")
+    List<Position> findAllByCompanyIdOrderByTitleAsc(Long companyId);
 }
