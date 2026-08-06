@@ -10,8 +10,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-import java.math.BigDecimal;
-
 @Getter
 @SuperBuilder
 @Entity
@@ -77,19 +75,6 @@ public class Candidate extends TenantBaseEntity {
     )
     private String currentJobTitle;
 
-    @Column(
-            name = "current_salary",
-            precision = 19,
-            scale = 2
-    )
-    private BigDecimal currentSalary;
-
-    @Column(
-            name = "salary_currency",
-            length = 3
-    )
-    private String salaryCurrency;
-
     @Column(name = "notice_period_days")
     private Integer noticePeriodDays;
 
@@ -116,14 +101,10 @@ public class Candidate extends TenantBaseEntity {
     public void updateProfessionalInformation(
             String currentCompany,
             String currentJobTitle,
-            BigDecimal currentSalary,
-            String salaryCurrency,
             Integer noticePeriodDays
     ) {
         this.currentCompany = currentCompany;
         this.currentJobTitle = currentJobTitle;
-        this.currentSalary = currentSalary;
-        this.salaryCurrency = salaryCurrency;
         this.noticePeriodDays = noticePeriodDays;
     }
 }

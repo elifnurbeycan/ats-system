@@ -73,6 +73,13 @@ public class CandidateProcess extends TenantBaseEntity {
     private PipelineStage currentStage;
 
     @Column(
+            name = "current_salary",
+            precision = 19,
+            scale = 2
+    )
+    private BigDecimal currentSalary;
+
+    @Column(
             name = "expected_salary",
             precision = 19,
             scale = 2
@@ -94,6 +101,15 @@ public class CandidateProcess extends TenantBaseEntity {
 
     @Column(name = "completed_at")
     private Instant completedAt;
+
+    // Adayın süreç başlangıcındaki mevcut maaş bilgisini günceller.
+    public void updateCurrentSalary(
+            BigDecimal currentSalary,
+            String salaryCurrency
+    ) {
+        this.currentSalary = currentSalary;
+        this.salaryCurrency = salaryCurrency;
+    }
 
     // Adayı yeni aşamaya taşır ve sürecin tamamlanma zamanını düzenler.
     public void changeStage(PipelineStage newStage) {
