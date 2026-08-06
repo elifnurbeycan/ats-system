@@ -4,6 +4,7 @@ import com.yasarbilgi.ats.company.entity.Company;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
+import java.util.List;
 
 public interface CompanyRepository extends JpaRepository<Company, Long> {
 
@@ -12,4 +13,7 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
 
     // Verilen şirket kodunun daha önce kullanılıp kullanılmadığını kontrol eder.
     boolean existsByCode(String code);
+
+    // Platform yönetimi için şirketleri adlarına göre getirir.
+    List<Company> findAllByOrderByNameAsc();
 }
