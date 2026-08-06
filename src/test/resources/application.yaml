@@ -14,3 +14,10 @@ spring:
 
 cors:
   allowed-origins: http://localhost:5173
+
+security:
+  jwt:
+    secret: test-secret-key-with-at-least-32-characters
+    issuer: ats-system-test
+    access-token-minutes: 15
+    refresh-token-days: 30
