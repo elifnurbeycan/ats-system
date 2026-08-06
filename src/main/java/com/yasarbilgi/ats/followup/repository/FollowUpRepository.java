@@ -8,15 +8,24 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 import java.time.Instant;
+import java.util.Set;
 
 public interface FollowUpRepository extends JpaRepository<FollowUp, Long> {
 
     // Şirkette bekleyen aktif takip görevlerinin sayısını getirir.
     long countByCompanyIdAndStatusAndActiveTrue(Long companyId, FollowUpStatus status);
 
+    // İzin verilen departmanlardaki aday süreçlerine bağlı bekleyen takip görevlerini sayar.
+    long countByCompanyIdAndCandidateProcessPositionDepartmentIdInAndStatusAndActiveTrue(
+            Long companyId, Set<Long> departmentIds, FollowUpStatus status);
+
     // Son tarihi geçmiş bekleyen aktif takip görevlerinin sayısını getirir.
     long countByCompanyIdAndStatusAndDueAtBeforeAndActiveTrue(
             Long companyId, FollowUpStatus status, Instant dueAt);
+
+    // İzin verilen departmanlardaki gecikmiş bekleyen takip görevlerini sayar.
+    long countByCompanyIdAndCandidateProcessPositionDepartmentIdInAndStatusAndDueAtBeforeAndActiveTrue(
+            Long companyId, Set<Long> departmentIds, FollowUpStatus status, Instant dueAt);
 
     // Takip görevini ilişkileriyle şirket ve aday sınırında getirir.
     @EntityGraph(attributePaths = {"candidate", "candidateProcess", "assignedTo"})

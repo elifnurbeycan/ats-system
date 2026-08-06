@@ -13,6 +13,8 @@ import com.yasarbilgi.ats.common.exception.BusinessRuleException;
 import com.yasarbilgi.ats.common.exception.ResourceNotFoundException;
 import com.yasarbilgi.ats.common.response.PageResponse;
 import com.yasarbilgi.ats.company.repository.CompanyRepository;
+import com.yasarbilgi.ats.security.service.DataScopeService;
+import com.yasarbilgi.ats.common.exception.ForbiddenException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,6 +34,7 @@ public class CandidateServiceImpl implements CandidateService {
     private final CandidateRepository candidateRepository;
     private final CandidateProcessRepository candidateProcessRepository;
     private final CandidateMapper candidateMapper;
+    private final DataScopeService dataScopeService;
 
     // Adayları en yeni kayıt önce olacak şekilde arar ve sayfalar.
     @Override
@@ -44,11 +47,11 @@ public class CandidateServiceImpl implements CandidateService {
         validateCompany(companyId);
         validatePageRequest(page, size);
 
-        Page<Candidate> candidates = candidateRepository.searchActiveCandidates(
-                companyId,
-                normalizeNullable(search),
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
-        );
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Candidate> candidates = dataScopeService.hasCompanyScope()
+                ? candidateRepository.searchActiveCandidates(companyId, normalizeNullable(search), pageable)
+                : candidateRepository.searchActiveCandidatesByDepartmentIds(companyId,
+                        requireManagedDepartments(), normalizeNullable(search), pageable);
 
         return PageResponse.from(candidates, candidateMapper::toResponseDto);
     }
@@ -57,6 +60,7 @@ public class CandidateServiceImpl implements CandidateService {
     @Override
     public CandidateDetailResponseDto getById(Long companyId, Long candidateId) {
         Candidate candidate = getCandidate(companyId, candidateId);
+        requireCandidateAccess(companyId, candidateId);
         return buildDetailResponse(companyId, candidate);
     }
 
@@ -69,6 +73,7 @@ public class CandidateServiceImpl implements CandidateService {
             UpdateCandidateRequestDto request
     ) {
         Candidate candidate = getCandidate(companyId, candidateId);
+        requireCandidateAccess(companyId, candidateId);
         String linkedinUrl = normalizeNullable(request.linkedinUrl());
         validateLinkedinUrlIsAvailable(companyId, candidateId, linkedinUrl);
 
@@ -96,11 +101,13 @@ public class CandidateServiceImpl implements CandidateService {
             Long companyId,
             Candidate candidate
     ) {
-        List<CandidateProcessSummaryResponseDto> processes = candidateProcessRepository
-                .findAllByCompanyIdAndCandidateIdAndActiveTrueOrderByCreatedAtDesc(
-                        companyId,
-                        candidate.getId()
-                )
+        var processesSource = dataScopeService.hasCompanyScope()
+                ? candidateProcessRepository.findAllByCompanyIdAndCandidateIdAndActiveTrueOrderByCreatedAtDesc(
+                        companyId, candidate.getId())
+                : candidateProcessRepository
+                .findAllByCompanyIdAndCandidateIdAndPositionDepartmentIdInAndActiveTrueOrderByCreatedAtDesc(
+                        companyId, candidate.getId(), requireManagedDepartments());
+        List<CandidateProcessSummaryResponseDto> processes = processesSource
                 .stream()
                 .map(candidateMapper::toProcessSummaryResponseDto)
                 .toList();
@@ -138,6 +145,23 @@ public class CandidateServiceImpl implements CandidateService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Aday bulunamadı: " + candidateId
                 ));
+    }
+
+    // Departman kapsamındaki kullanıcının aday üzerinde erişimi olduğunu doğrular.
+    private void requireCandidateAccess(Long companyId, Long candidateId) {
+        if (!dataScopeService.hasCompanyScope()
+                && !candidateProcessRepository
+                .existsByCompanyIdAndCandidateIdAndPositionDepartmentIdInAndActiveTrue(
+                        companyId, candidateId, requireManagedDepartments())) {
+            throw new ForbiddenException("Bu adayın süreçlerine erişim yetkiniz bulunmuyor.");
+        }
+    }
+
+    // Kullanıcının yönetebildiği en az bir departman bulunduğunu doğrular.
+    private java.util.Set<Long> requireManagedDepartments() {
+        java.util.Set<Long> ids = dataScopeService.getManagedDepartmentIds();
+        if (ids.isEmpty()) throw new ForbiddenException("Yönetilen aktif bir departman bulunmuyor.");
+        return ids;
     }
 
     // LinkedIn adresinin aynı şirkette başka bir adaya ait olmadığını doğrular.

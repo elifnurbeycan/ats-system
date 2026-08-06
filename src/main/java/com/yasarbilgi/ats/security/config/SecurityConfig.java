@@ -3,6 +3,7 @@ package com.yasarbilgi.ats.security.config;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.yasarbilgi.ats.security.converter.JwtAuthoritiesConverter;
 import com.yasarbilgi.ats.security.filter.TenantIsolationFilter;
+import com.yasarbilgi.ats.security.filter.DepartmentDataScopeFilter;
 import com.yasarbilgi.ats.security.handler.*;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.*;
@@ -30,6 +31,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             TenantIsolationFilter tenantIsolationFilter,
+            DepartmentDataScopeFilter departmentDataScopeFilter,
             RestAuthenticationEntryPoint authenticationEntryPoint,
             RestAccessDeniedHandler accessDeniedHandler,
             JwtAuthoritiesConverter authoritiesConverter
@@ -145,6 +147,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
                 .addFilterAfter(tenantIsolationFilter, BearerTokenAuthenticationFilter.class)
+                .addFilterAfter(departmentDataScopeFilter, TenantIsolationFilter.class)
                 .build();
     }
 

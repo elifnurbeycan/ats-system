@@ -29,6 +29,7 @@ import com.yasarbilgi.ats.pipeline.repository.RecruitmentPipelineRepository;
 import com.yasarbilgi.ats.position.entity.Position;
 import com.yasarbilgi.ats.position.entity.PositionStatus;
 import com.yasarbilgi.ats.position.repository.PositionRepository;
+import com.yasarbilgi.ats.security.service.DataScopeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -53,6 +54,7 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
     private final CandidateProcessRepository candidateProcessRepository;
     private final CandidateProcessStageHistoryRepository stageHistoryRepository;
     private final CandidateProcessMapper candidateProcessMapper;
+    private final DataScopeService dataScopeService;
 
     @Override
     @Transactional
@@ -65,6 +67,7 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
 
         Company company = getCompany(companyId);
         Position position = getPosition(companyId, request.positionId());
+        dataScopeService.requireDepartmentAccess(position.getDepartment().getId());
         validatePositionIsOpen(position);
         RecruitmentPipeline pipeline = getPipeline(companyId, request.pipelineId());
         PipelineStage initialStage = stageRepository
@@ -129,6 +132,8 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
                         "Seçilen aşama bu pipeline içerisinde bulunamadı."
                 ));
 
+        dataScopeService.requireDepartmentAccess(process.getPosition().getDepartment().getId());
+
         PipelineStage previousStage = process.getCurrentStage();
 
         if (previousStage.getId().equals(newStage.getId())) {
@@ -159,6 +164,7 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
 
         RecruitmentPipeline pipeline = getPipeline(companyId, pipelineId);
         Position position = getPosition(companyId, positionId);
+        dataScopeService.requireDepartmentAccess(position.getDepartment().getId());
 
         List<PipelineStage> stages = stageRepository
                 .findAllByCompanyIdAndPipelineIdAndActiveTrueOrderByDisplayOrderAsc(
@@ -204,9 +210,9 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
             Long companyId,
             Long candidateProcessId
     ) {
-        return candidateProcessMapper.toDetailResponseDto(
-                getProcessWithDetails(companyId, candidateProcessId)
-        );
+        CandidateProcess process = getProcessWithDetails(companyId, candidateProcessId);
+        dataScopeService.requireDepartmentAccess(process.getPosition().getDepartment().getId());
+        return candidateProcessMapper.toDetailResponseDto(process);
     }
 
     // Aday sürecinin hassas maaş bilgilerini ayrı yanıt olarak getirir.
@@ -215,9 +221,9 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
             Long companyId,
             Long candidateProcessId
     ) {
-        return candidateProcessMapper.toCompensationResponseDto(
-                getProcess(companyId, candidateProcessId)
-        );
+        CandidateProcess process = getProcess(companyId, candidateProcessId);
+        dataScopeService.requireDepartmentAccess(process.getPosition().getDepartment().getId());
+        return candidateProcessMapper.toCompensationResponseDto(process);
     }
 
     // Mevcut, beklenen ve teklif edilen maaşı tek işlemde günceller.
@@ -229,6 +235,7 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
             UpdateCandidateCompensationRequestDto request
     ) {
         CandidateProcess process = getProcess(companyId, candidateProcessId);
+        dataScopeService.requireDepartmentAccess(process.getPosition().getDepartment().getId());
         String currency = resolveCurrency(request);
 
         process.updateCompensation(
@@ -247,7 +254,8 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
             Long companyId,
             Long candidateProcessId
     ) {
-        getProcess(companyId, candidateProcessId);
+        CandidateProcess process = getProcess(companyId, candidateProcessId);
+        dataScopeService.requireDepartmentAccess(process.getPosition().getDepartment().getId());
 
         return stageHistoryRepository
                 .findAllByCompanyIdAndCandidateProcessIdOrderByCreatedAtAsc(
