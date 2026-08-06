@@ -37,7 +37,7 @@ public class DepartmentDataScopeFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-        if (dataScopeService.hasCompanyScope()) {
+        if (dataScopeService.hasCompanyScope() || !dataScopeService.hasDepartmentScope()) {
             filterChain.doFilter(request, response);
             return;
         }

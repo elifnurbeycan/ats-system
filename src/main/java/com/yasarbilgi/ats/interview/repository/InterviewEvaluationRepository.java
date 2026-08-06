@@ -14,4 +14,7 @@ public interface InterviewEvaluationRepository extends JpaRepository<InterviewEv
     @EntityGraph(attributePaths = "evaluator")
     List<InterviewEvaluation> findAllByCompanyIdAndInterviewIdAndActiveTrueOrderByCreatedAtAsc(
             Long companyId, Long interviewId);
+    // Görüşmecinin yalnızca kendi aktif değerlendirmesini getirir.
+    List<InterviewEvaluation> findAllByCompanyIdAndInterviewIdAndEvaluatorIdAndActiveTrueOrderByCreatedAtAsc(
+            Long companyId, Long interviewId, Long evaluatorId);
 }
