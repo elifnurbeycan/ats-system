@@ -108,10 +108,12 @@ public class User extends TenantBaseEntity {
     )
     private Set<Role> roles = new HashSet<>();
 
+    // Kullanıcının ad ve soyadını tek bir görünen ad olarak döndürür.
     public String getFullName() {
         return firstName + " " + lastName;
     }
 
+    // Kullanıcının temel profil ve departman bilgilerini günceller.
     public void updateProfile(
             String firstName,
             String lastName,
@@ -124,18 +126,28 @@ public class User extends TenantBaseEntity {
         this.department = department;
     }
 
+    // Kullanıcıya yeni bir rol atar.
     public void assignRole(Role role) {
         roles.add(role);
     }
 
+    // Kullanıcıdan mevcut bir rolü kaldırır.
     public void revokeRole(Role role) {
         roles.remove(role);
     }
 
+    // Kullanıcının mevcut rollerini verilen yeni rol kümesiyle değiştirir.
+    public void replaceRoles(Set<Role> roles) {
+        this.roles.clear();
+        this.roles.addAll(roles);
+    }
+
+    // Kullanıcının davet, aktif veya askıya alınmış durumunu değiştirir.
     public void changeStatus(UserStatus status) {
         this.status = status;
     }
 
+    // Kullanıcının şifre özetini kaydeder ve zorunlu şifre değişimini tamamlar.
     public void changePasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
         this.mustChangePassword = false;
