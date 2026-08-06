@@ -8,6 +8,7 @@ public record PipelineStageResponseDto(
         String code,
         String description,
         Integer displayOrder,
-        PipelineStageType stageType
+        PipelineStageType stageType,
+        boolean active
 ) {
 }
