@@ -19,4 +19,7 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
 
     // Şirkete ait aktif departmanları ada göre sıralayarak getirir.
     List<Department> findAllByCompanyIdAndActiveTrueOrderByNameAsc(Long companyId);
+
+    // Şirkete ait aktif ve pasif tüm departmanları ada göre sıralayarak getirir.
+    List<Department> findAllByCompanyIdOrderByNameAsc(Long companyId);
 }
