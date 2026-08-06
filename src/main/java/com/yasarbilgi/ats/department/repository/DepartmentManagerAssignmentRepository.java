@@ -2,6 +2,7 @@ package com.yasarbilgi.ats.department.repository;
 
 import com.yasarbilgi.ats.department.entity.DepartmentManagerAssignment;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,5 +31,29 @@ public interface DepartmentManagerAssignmentRepository
     List<DepartmentManagerAssignment> findAllByCompanyIdAndUserIdAndActiveTrue(
             Long companyId,
             Long userId
+    );
+
+    // Atamayı departman ve kullanıcı ayrıntılarıyla şirket sınırında getirir.
+    @EntityGraph(attributePaths = {"department", "user"})
+    Optional<DepartmentManagerAssignment> findWithDetailsByCompanyIdAndDepartmentIdAndId(
+            Long companyId,
+            Long departmentId,
+            Long assignmentId
+    );
+
+    // Departmanın aktif yönetici atamalarını kullanıcı ayrıntılarıyla getirir.
+    @EntityGraph(attributePaths = {"department", "user"})
+    List<DepartmentManagerAssignment>
+    findAllByCompanyIdAndDepartmentIdAndActiveTrueOrderByStartedAtDesc(
+            Long companyId,
+            Long departmentId
+    );
+
+    // Departmanın geçmiş dahil tüm yönetici atamalarını kullanıcı ayrıntılarıyla getirir.
+    @EntityGraph(attributePaths = {"department", "user"})
+    List<DepartmentManagerAssignment>
+    findAllByCompanyIdAndDepartmentIdOrderByStartedAtDesc(
+            Long companyId,
+            Long departmentId
     );
 }
