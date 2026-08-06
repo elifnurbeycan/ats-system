@@ -65,6 +65,12 @@ public interface CandidateProcessRepository
             Long positionId
     );
 
+    // Pipeline üzerinde aktif bir aday süreci bulunup bulunmadığını kontrol eder.
+    boolean existsByCompanyIdAndPipelineIdAndActiveTrue(Long companyId, Long pipelineId);
+
+    // Belirtilen aşamada aktif bir aday süreci bulunup bulunmadığını kontrol eder.
+    boolean existsByCompanyIdAndCurrentStageIdAndActiveTrue(Long companyId, Long stageId);
+
     Page<CandidateProcess> findAllByCompanyIdAndCandidateIdAndActiveTrue(
             Long companyId,
             Long candidateId,
