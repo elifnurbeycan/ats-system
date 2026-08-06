@@ -11,6 +11,12 @@ import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
+import com.yasarbilgi.ats.security.filter.TenantIsolationFilter;
+import com.yasarbilgi.ats.security.handler.RestAccessDeniedHandler;
+import com.yasarbilgi.ats.security.handler.RestAuthenticationEntryPoint;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -21,16 +27,31 @@ import java.nio.charset.StandardCharsets;
 public class SecurityConfig {
     // API'yi stateless JWT doğrulamasıyla çalıştırır; iş endpointleri sonraki adımda korunacaktır.
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            TenantIsolationFilter tenantIsolationFilter,
+            RestAuthenticationEntryPoint authenticationEntryPoint,
+            RestAccessDeniedHandler accessDeniedHandler
+    ) throws Exception {
         return http.csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/v1/platform/**", "/api/v1/auth/platform/me").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/auth/me").authenticated()
                         .requestMatchers("/api/v1/auth/**", "/actuator/health").permitAll()
-                        .anyRequest().permitAll())
+                        .requestMatchers("/api/v1/companies/**").authenticated()
+                        .requestMatchers("/actuator/**").hasRole("SUPER_ADMIN")
+                        .anyRequest().denyAll())
                 .oauth2ResourceServer(resource -> resource.jwt(jwt ->
-                        jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
+                                jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
+                .addFilterAfter(tenantIsolationFilter, BearerTokenAuthenticationFilter.class)
                 .build();
     }
     // Kullanıcı şifrelerini BCrypt ile doğrulayan encoder'ı oluşturur.
