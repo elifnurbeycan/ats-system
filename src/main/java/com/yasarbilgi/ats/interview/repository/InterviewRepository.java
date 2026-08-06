@@ -24,4 +24,17 @@ public interface InterviewRepository extends JpaRepository<Interview, Long> {
     @EntityGraph(attributePaths = "interviewers")
     List<Interview> findAllByCompanyIdAndCandidateProcessIdAndActiveTrueOrderByScheduledAtAsc(
             Long companyId, Long candidateProcessId);
+
+    // Görüşmecinin atandığı süreç görüşmelerini tarih sırasıyla getirir.
+    @EntityGraph(attributePaths = "interviewers")
+    List<Interview> findAllByCompanyIdAndCandidateProcessIdAndInterviewersIdAndActiveTrueOrderByScheduledAtAsc(
+            Long companyId, Long candidateProcessId, Long interviewerId);
+
+    // Kullanıcının görüşmeye görüşmeci olarak atanıp atanmadığını kontrol eder.
+    boolean existsByCompanyIdAndCandidateProcessIdAndIdAndInterviewersIdAndActiveTrue(
+            Long companyId, Long candidateProcessId, Long interviewId, Long interviewerId);
+
+    // Kullanıcının süreçteki herhangi bir aktif görüşmeye atanıp atanmadığını kontrol eder.
+    boolean existsByCompanyIdAndCandidateProcessIdAndInterviewersIdAndActiveTrue(
+            Long companyId, Long candidateProcessId, Long interviewerId);
 }

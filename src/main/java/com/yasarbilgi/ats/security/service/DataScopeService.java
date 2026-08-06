@@ -20,6 +20,23 @@ public class DataScopeService {
                 .anyMatch(authority -> COMPANY_ROLES.contains(authority.getAuthority()));
     }
 
+    // Oturum kullanıcısının departman yöneticisi rolüne sahip olup olmadığını kontrol eder.
+    public boolean hasDepartmentScope() {
+        return hasRole("ROLE_DEPARTMENT_MANAGER");
+    }
+
+    // Kullanıcının yalnızca atandığı görüşmeler kapsamında çalışıp çalışmadığını kontrol eder.
+    public boolean hasInterviewerScope() {
+        return !hasCompanyScope() && !hasDepartmentScope() && hasRole("ROLE_INTERVIEWER");
+    }
+
+    // JWT içindeki güncel kullanıcı kimliğini getirir.
+    public Long getCurrentUserId() {
+        Number userId = jwt().getToken().getClaim("userId");
+        if (userId == null) throw new ForbiddenException("Oturum kullanıcı kimliği bulunamadı.");
+        return userId.longValue();
+    }
+
     // Departman kapsamındaki kullanıcının yönetebildiği departman kimliklerini getirir.
     public Set<Long> getManagedDepartmentIds() {
         if (hasCompanyScope()) return Set.of();
@@ -52,5 +69,11 @@ public class DataScopeService {
             throw new ForbiddenException("Veri kapsamı belirlenemedi.");
         }
         return authentication;
+    }
+
+    // Oturumun belirtilen role sahip olup olmadığını kontrol eder.
+    private boolean hasRole(String role) {
+        return authentication().getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals(role));
     }
 }
