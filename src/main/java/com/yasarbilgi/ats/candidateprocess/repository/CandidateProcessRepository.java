@@ -17,6 +17,26 @@ public interface CandidateProcessRepository
             Long candidateProcessId
     );
 
+    // Aday sürecini aday, pozisyon, departman, pipeline ve aşama bilgileriyle getirir.
+    @EntityGraph(attributePaths = {
+            "candidate",
+            "position",
+            "position.department",
+            "pipeline",
+            "currentStage"
+    })
+    Optional<CandidateProcess> findWithDetailsByCompanyIdAndId(
+            Long companyId,
+            Long candidateProcessId
+    );
+
+    // Adayın aynı pozisyonda devam eden başka bir aktif süreci olup olmadığını kontrol eder.
+    boolean existsByCompanyIdAndCandidateIdAndPositionIdAndActiveTrue(
+            Long companyId,
+            Long candidateId,
+            Long positionId
+    );
+
     Page<CandidateProcess> findAllByCompanyIdAndCandidateIdAndActiveTrue(
             Long companyId,
             Long candidateId,

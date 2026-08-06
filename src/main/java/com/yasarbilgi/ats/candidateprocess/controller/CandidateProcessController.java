@@ -2,7 +2,11 @@ package com.yasarbilgi.ats.candidateprocess.controller;
 
 import com.yasarbilgi.ats.candidateprocess.dto.request.ChangeCandidateStageRequestDto;
 import com.yasarbilgi.ats.candidateprocess.dto.request.CreateCandidateProcessRequestDto;
+import com.yasarbilgi.ats.candidateprocess.dto.request.UpdateCandidateCompensationRequestDto;
+import com.yasarbilgi.ats.candidateprocess.dto.response.CandidateCompensationResponseDto;
+import com.yasarbilgi.ats.candidateprocess.dto.response.CandidateProcessDetailResponseDto;
 import com.yasarbilgi.ats.candidateprocess.dto.response.CandidateProcessResponseDto;
+import com.yasarbilgi.ats.candidateprocess.dto.response.CandidateStageHistoryResponseDto;
 import com.yasarbilgi.ats.candidateprocess.dto.response.PipelineBoardResponseDto;
 import com.yasarbilgi.ats.candidateprocess.service.CandidateProcessService;
 import com.yasarbilgi.ats.common.response.ApiResponse;
@@ -14,9 +18,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -25,6 +32,7 @@ public class CandidateProcessController {
 
     private final CandidateProcessService candidateProcessService;
 
+    // Yeni adayı açık pozisyonun pipeline sürecine ekler.
     @PostMapping("/candidate-processes")
     public ResponseEntity<ApiResponse<CandidateProcessResponseDto>> create(
             @PathVariable Long companyId,
@@ -35,6 +43,7 @@ public class CandidateProcessController {
                 .body(ApiResponse.success("Aday süreci oluşturuldu.", created));
     }
 
+    // Adayı pipeline içerisindeki başka bir aşamaya taşır.
     @PatchMapping("/candidate-processes/{candidateProcessId}/stage")
     public ResponseEntity<ApiResponse<CandidateProcessResponseDto>> changeStage(
             @PathVariable Long companyId,
@@ -49,6 +58,57 @@ public class CandidateProcessController {
         return ResponseEntity.ok(ApiResponse.success("Aday aşaması güncellendi.", updated));
     }
 
+    // Aday sürecinin maaş bilgisi içermeyen detaylarını getirir.
+    @GetMapping("/candidate-processes/{candidateProcessId}")
+    public ResponseEntity<ApiResponse<CandidateProcessDetailResponseDto>> getById(
+            @PathVariable Long companyId,
+            @PathVariable Long candidateProcessId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                candidateProcessService.getById(companyId, candidateProcessId)
+        ));
+    }
+
+    // Yetkili ekranlar için aday sürecinin hassas maaş bilgilerini getirir.
+    @GetMapping("/candidate-processes/{candidateProcessId}/compensation")
+    public ResponseEntity<ApiResponse<CandidateCompensationResponseDto>> getCompensation(
+            @PathVariable Long companyId,
+            @PathVariable Long candidateProcessId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                candidateProcessService.getCompensation(companyId, candidateProcessId)
+        ));
+    }
+
+    // Yetkili ekranlardan aday sürecinin maaş bilgilerini birlikte günceller.
+    @PutMapping("/candidate-processes/{candidateProcessId}/compensation")
+    public ResponseEntity<ApiResponse<CandidateCompensationResponseDto>> updateCompensation(
+            @PathVariable Long companyId,
+            @PathVariable Long candidateProcessId,
+            @Valid @RequestBody UpdateCandidateCompensationRequestDto request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Maaş bilgileri güncellendi.",
+                candidateProcessService.updateCompensation(
+                        companyId,
+                        candidateProcessId,
+                        request
+                )
+        ));
+    }
+
+    // Aday sürecinin aşama değişikliklerini kronolojik olarak listeler.
+    @GetMapping("/candidate-processes/{candidateProcessId}/stage-history")
+    public ResponseEntity<ApiResponse<List<CandidateStageHistoryResponseDto>>> getStageHistory(
+            @PathVariable Long companyId,
+            @PathVariable Long candidateProcessId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                candidateProcessService.getStageHistory(companyId, candidateProcessId)
+        ));
+    }
+
+    // Seçilen pozisyon ve pipeline için dinamik board görünümünü getirir.
     @GetMapping("/pipelines/{pipelineId}/positions/{positionId}/board")
     public ResponseEntity<ApiResponse<PipelineBoardResponseDto>> getBoard(
             @PathVariable Long companyId,
