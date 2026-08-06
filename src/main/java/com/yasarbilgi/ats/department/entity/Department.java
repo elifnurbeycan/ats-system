@@ -45,13 +45,9 @@ public class Department extends TenantBaseEntity {
     )
     private String description;
 
-    // Departmanın görünen adını günceller.
-    public void updateName(String name) {
+    // Departmanın görünen adı ve açıklamasını birlikte günceller.
+    public void update(String name, String description) {
         this.name = name;
-    }
-
-    // Departmanın açıklamasını günceller.
-    public void updateDescription(String description) {
         this.description = description;
     }
 }
