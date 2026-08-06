@@ -10,6 +10,9 @@ import java.util.Optional;
 
 public interface PositionRepository extends JpaRepository<Position, Long> {
 
+    // Şirkette belirtilen durumda bulunan aktif pozisyonların sayısını getirir.
+    long countByCompanyIdAndStatusAndActiveTrue(Long companyId, PositionStatus status);
+
     Optional<Position> findByCompanyIdAndId(Long companyId, Long positionId);
 
     // Şirkete ait pozisyonu benzersiz pozisyon koduna göre getirir.
