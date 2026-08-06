@@ -102,6 +102,19 @@ public class CandidateProcess extends TenantBaseEntity {
     @Column(name = "completed_at")
     private Instant completedAt;
 
+    // Sürece ait mevcut, beklenen ve teklif edilen maaş bilgilerini birlikte günceller.
+    public void updateCompensation(
+            BigDecimal currentSalary,
+            BigDecimal expectedSalary,
+            BigDecimal offeredSalary,
+            String salaryCurrency
+    ) {
+        this.currentSalary = currentSalary;
+        this.expectedSalary = expectedSalary;
+        this.offeredSalary = offeredSalary;
+        this.salaryCurrency = salaryCurrency;
+    }
+
     // Adayın süreç başlangıcındaki mevcut maaş bilgisini günceller.
     public void updateCurrentSalary(
             BigDecimal currentSalary,

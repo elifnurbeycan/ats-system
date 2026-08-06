@@ -4,7 +4,11 @@ import com.yasarbilgi.ats.candidate.entity.Candidate;
 import com.yasarbilgi.ats.candidate.repository.CandidateRepository;
 import com.yasarbilgi.ats.candidateprocess.dto.request.ChangeCandidateStageRequestDto;
 import com.yasarbilgi.ats.candidateprocess.dto.request.CreateCandidateProcessRequestDto;
+import com.yasarbilgi.ats.candidateprocess.dto.request.UpdateCandidateCompensationRequestDto;
+import com.yasarbilgi.ats.candidateprocess.dto.response.CandidateCompensationResponseDto;
+import com.yasarbilgi.ats.candidateprocess.dto.response.CandidateProcessDetailResponseDto;
 import com.yasarbilgi.ats.candidateprocess.dto.response.CandidateProcessResponseDto;
+import com.yasarbilgi.ats.candidateprocess.dto.response.CandidateStageHistoryResponseDto;
 import com.yasarbilgi.ats.candidateprocess.dto.response.PipelineBoardResponseDto;
 import com.yasarbilgi.ats.candidateprocess.dto.response.PipelineBoardStageResponseDto;
 import com.yasarbilgi.ats.candidateprocess.entity.CandidateProcess;
@@ -23,6 +27,7 @@ import com.yasarbilgi.ats.pipeline.entity.RecruitmentPipeline;
 import com.yasarbilgi.ats.pipeline.repository.PipelineStageRepository;
 import com.yasarbilgi.ats.pipeline.repository.RecruitmentPipelineRepository;
 import com.yasarbilgi.ats.position.entity.Position;
+import com.yasarbilgi.ats.position.entity.PositionStatus;
 import com.yasarbilgi.ats.position.repository.PositionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -59,6 +65,7 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
 
         Company company = getCompany(companyId);
         Position position = getPosition(companyId, request.positionId());
+        validatePositionIsOpen(position);
         RecruitmentPipeline pipeline = getPipeline(companyId, request.pipelineId());
         PipelineStage initialStage = stageRepository
                 .findFirstByCompanyIdAndPipelineIdAndStageTypeAndActiveTrueOrderByDisplayOrderAsc(
@@ -71,6 +78,11 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
                 ));
 
         Candidate candidate = findOrCreateCandidate(company, request);
+        validateCandidateHasNoActiveProcessForPosition(
+                companyId,
+                candidate.getId(),
+                position.getId()
+        );
 
         CandidateProcess process = CandidateProcess.builder()
                 .company(company)
@@ -186,6 +198,67 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
         );
     }
 
+    // Aday sürecini ilişkili aday, pozisyon, departman ve pipeline bilgileriyle getirir.
+    @Override
+    public CandidateProcessDetailResponseDto getById(
+            Long companyId,
+            Long candidateProcessId
+    ) {
+        return candidateProcessMapper.toDetailResponseDto(
+                getProcessWithDetails(companyId, candidateProcessId)
+        );
+    }
+
+    // Aday sürecinin hassas maaş bilgilerini ayrı yanıt olarak getirir.
+    @Override
+    public CandidateCompensationResponseDto getCompensation(
+            Long companyId,
+            Long candidateProcessId
+    ) {
+        return candidateProcessMapper.toCompensationResponseDto(
+                getProcess(companyId, candidateProcessId)
+        );
+    }
+
+    // Mevcut, beklenen ve teklif edilen maaşı tek işlemde günceller.
+    @Override
+    @Transactional
+    public CandidateCompensationResponseDto updateCompensation(
+            Long companyId,
+            Long candidateProcessId,
+            UpdateCandidateCompensationRequestDto request
+    ) {
+        CandidateProcess process = getProcess(companyId, candidateProcessId);
+        String currency = resolveCurrency(request);
+
+        process.updateCompensation(
+                request.currentSalary(),
+                request.expectedSalary(),
+                request.offeredSalary(),
+                currency
+        );
+
+        return candidateProcessMapper.toCompensationResponseDto(process);
+    }
+
+    // Süreç aşamalarını ilk kayıttan son değişikliğe doğru getirir.
+    @Override
+    public List<CandidateStageHistoryResponseDto> getStageHistory(
+            Long companyId,
+            Long candidateProcessId
+    ) {
+        getProcess(companyId, candidateProcessId);
+
+        return stageHistoryRepository
+                .findAllByCompanyIdAndCandidateProcessIdOrderByCreatedAtAsc(
+                        companyId,
+                        candidateProcessId
+                )
+                .stream()
+                .map(candidateProcessMapper::toStageHistoryResponseDto)
+                .toList();
+    }
+
     private Candidate findOrCreateCandidate(
             Company company,
             CreateCandidateProcessRequestDto request
@@ -199,6 +272,75 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
         }
 
         return saveCandidate(company, request, null);
+    }
+
+    // Sürece aday eklenebilmesi için pozisyonun aday kabul ediyor olmasını doğrular.
+    private void validatePositionIsOpen(Position position) {
+        if (position.getStatus() != PositionStatus.OPEN) {
+            throw new BusinessRuleException(
+                    "Yalnızca açık pozisyonlara aday eklenebilir."
+            );
+        }
+    }
+
+    // Aynı adayın aynı pozisyonda ikinci bir aktif süreç kaydı açmasını engeller.
+    private void validateCandidateHasNoActiveProcessForPosition(
+            Long companyId,
+            Long candidateId,
+            Long positionId
+    ) {
+        if (candidateProcessRepository
+                .existsByCompanyIdAndCandidateIdAndPositionIdAndActiveTrue(
+                        companyId,
+                        candidateId,
+                        positionId
+                )) {
+            throw new BusinessRuleException(
+                    "Adayın bu pozisyon için zaten aktif bir süreci bulunuyor."
+            );
+        }
+    }
+
+    // Maaş girilmişse para birimini zorunlu tutar ve büyük harfli biçime getirir.
+    private String resolveCurrency(UpdateCandidateCompensationRequestDto request) {
+        boolean hasSalary = request.currentSalary() != null
+                || request.expectedSalary() != null
+                || request.offeredSalary() != null;
+
+        if (!hasSalary) {
+            return null;
+        }
+
+        if (request.salaryCurrency() == null || request.salaryCurrency().isBlank()) {
+            throw new BusinessRuleException(
+                    "Maaş bilgisi girildiğinde para birimi zorunludur."
+            );
+        }
+
+        return request.salaryCurrency().trim().toUpperCase(Locale.ROOT);
+    }
+
+    // Aday sürecini şirket sınırı içerisinde getirir.
+    private CandidateProcess getProcess(Long companyId, Long candidateProcessId) {
+        return candidateProcessRepository
+                .findByCompanyIdAndId(companyId, candidateProcessId)
+                .filter(CandidateProcess::isActive)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Aday süreci bulunamadı."
+                ));
+    }
+
+    // Aday sürecini detay yanıtında kullanılan ilişkileriyle birlikte getirir.
+    private CandidateProcess getProcessWithDetails(
+            Long companyId,
+            Long candidateProcessId
+    ) {
+        return candidateProcessRepository
+                .findWithDetailsByCompanyIdAndId(companyId, candidateProcessId)
+                .filter(CandidateProcess::isActive)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Aday süreci bulunamadı."
+                ));
     }
 
     private Candidate saveCandidate(
