@@ -92,14 +92,17 @@ public class Role extends TenantBaseEntity {
     )
     private Set<Permission> permissions = new HashSet<>();
 
+    // Role yeni bir yetki ekler.
     public void assignPermission(Permission permission) {
         permissions.add(permission);
     }
 
+    // Rolden mevcut bir yetkiyi kaldırır.
     public void revokePermission(Permission permission) {
         permissions.remove(permission);
     }
 
+    // Rolün belirtilen yetkiye sahip olup olmadığını kontrol eder.
     public boolean hasPermission(Permission permission) {
         return permissions.contains(permission);
     }

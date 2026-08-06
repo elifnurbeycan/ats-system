@@ -11,6 +11,9 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
     // Şirkete ait departmanı benzersiz departman koduna göre getirir.
     Optional<Department> findByCompanyIdAndCode(Long companyId, String code);
 
+    // Şirkete ait departmanı kimliğine göre getirir.
+    Optional<Department> findByCompanyIdAndId(Long companyId, Long departmentId);
+
     // Şirket içerisinde verilen departman kodunun kullanılıp kullanılmadığını kontrol eder.
     boolean existsByCompanyIdAndCode(Long companyId, String code);
 
