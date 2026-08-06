@@ -9,8 +9,36 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import java.util.Optional;
 import java.util.List;
 
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 public interface CandidateProcessRepository
         extends JpaRepository<CandidateProcess, Long> {
+
+    // Şirkette henüz tamamlanmamış aktif aday süreçlerinin sayısını getirir.
+    long countByCompanyIdAndActiveTrueAndCompletedAtIsNull(Long companyId);
+
+    // Aktif aday süreçlerini mevcut pipeline aşamalarına göre gruplandırır.
+    @Query("""
+            SELECT stage.id AS stageId, stage.name AS stageName, stage.code AS stageCode,
+                   stage.displayOrder AS displayOrder, COUNT(process.id) AS candidateCount
+            FROM CandidateProcess process
+            JOIN process.currentStage stage
+            WHERE process.company.id = :companyId
+              AND process.active = true
+              AND process.completedAt IS NULL
+            GROUP BY stage.id, stage.name, stage.code, stage.displayOrder
+            ORDER BY stage.displayOrder
+            """)
+    List<StageCandidateCountProjection> countActiveProcessesByStage(@Param("companyId") Long companyId);
+
+    interface StageCandidateCountProjection {
+        Long getStageId();
+        String getStageName();
+        String getStageCode();
+        Integer getDisplayOrder();
+        Long getCandidateCount();
+    }
 
     Optional<CandidateProcess> findByCompanyIdAndId(
             Long companyId,

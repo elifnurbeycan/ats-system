@@ -11,6 +11,9 @@ import java.util.Optional;
 
 public interface CandidateRepository extends JpaRepository<Candidate, Long> {
 
+    // Şirketteki aktif adayların toplam sayısını getirir.
+    long countByCompanyIdAndActiveTrue(Long companyId);
+
     Optional<Candidate> findByCompanyIdAndId(
             Long companyId,
             Long candidateId
