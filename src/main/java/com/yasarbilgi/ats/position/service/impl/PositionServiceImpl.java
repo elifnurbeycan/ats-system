@@ -16,6 +16,7 @@ import com.yasarbilgi.ats.position.entity.PositionStatus;
 import com.yasarbilgi.ats.position.mapper.PositionMapper;
 import com.yasarbilgi.ats.position.repository.PositionRepository;
 import com.yasarbilgi.ats.position.service.PositionService;
+import com.yasarbilgi.ats.security.service.DataScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,7 @@ public class PositionServiceImpl implements PositionService {
     private final DepartmentRepository departmentRepository;
     private final PositionRepository positionRepository;
     private final PositionMapper positionMapper;
+    private final DataScopeService dataScopeService;
 
     // Pozisyonu taslak durumda ve normalize edilmiş benzersiz koduyla oluşturur.
     @Override
@@ -39,6 +41,7 @@ public class PositionServiceImpl implements PositionService {
     public PositionResponseDto create(Long companyId, CreatePositionRequestDto request) {
         Company company = getCompany(companyId);
         Department department = getActiveDepartment(companyId, request.departmentId());
+        dataScopeService.requireDepartmentAccess(department.getId());
         String normalizedCode = normalizeCode(request.code());
 
         if (positionRepository.existsByCompanyIdAndCode(companyId, normalizedCode)) {
@@ -71,12 +74,17 @@ public class PositionServiceImpl implements PositionService {
 
         if (departmentId != null) {
             getDepartment(companyId, departmentId);
+            dataScopeService.requireDepartmentAccess(departmentId);
         }
+
+        var managedDepartmentIds = dataScopeService.getManagedDepartmentIds();
 
         return positionRepository.findAllByCompanyIdAndActiveTrueOrderByTitleAsc(companyId)
                 .stream()
                 .filter(position -> departmentId == null
                         || position.getDepartment().getId().equals(departmentId))
+                .filter(position -> dataScopeService.hasCompanyScope()
+                        || managedDepartmentIds.contains(position.getDepartment().getId()))
                 .filter(position -> status == null || position.getStatus() == status)
                 .map(positionMapper::toResponseDto)
                 .toList();
@@ -85,7 +93,9 @@ public class PositionServiceImpl implements PositionService {
     // Pozisyon detayını şirket sınırı içerisinde getirir.
     @Override
     public PositionResponseDto getById(Long companyId, Long positionId) {
-        return positionMapper.toResponseDto(getPosition(companyId, positionId));
+        Position position = getPosition(companyId, positionId);
+        dataScopeService.requireDepartmentAccess(position.getDepartment().getId());
+        return positionMapper.toResponseDto(position);
     }
 
     // Kapanmamış pozisyonun temel bilgilerini günceller.
@@ -97,8 +107,10 @@ public class PositionServiceImpl implements PositionService {
             UpdatePositionRequestDto request
     ) {
         Position position = getPosition(companyId, positionId);
+        dataScopeService.requireDepartmentAccess(position.getDepartment().getId());
         validateEditable(position);
         Department department = getActiveDepartment(companyId, request.departmentId());
+        dataScopeService.requireDepartmentAccess(department.getId());
 
         position.updateDetails(
                 request.title().trim(),
@@ -119,6 +131,7 @@ public class PositionServiceImpl implements PositionService {
             ChangePositionStatusRequestDto request
     ) {
         Position position = getPosition(companyId, positionId);
+        dataScopeService.requireDepartmentAccess(position.getDepartment().getId());
         PositionStatus targetStatus = request.status();
 
         if (position.getStatus() == targetStatus) {
@@ -135,12 +148,16 @@ public class PositionServiceImpl implements PositionService {
     public List<PositionSummaryResponseDto> getOpenPositions(Long companyId) {
         getCompany(companyId);
 
+        var managedDepartmentIds = dataScopeService.getManagedDepartmentIds();
+
         return positionRepository
                 .findAllByCompanyIdAndStatusAndActiveTrueOrderByTitleAsc(
                         companyId,
                         PositionStatus.OPEN
                 )
                 .stream()
+                .filter(position -> dataScopeService.hasCompanyScope()
+                        || managedDepartmentIds.contains(position.getDepartment().getId()))
                 .map(positionMapper::toSummaryResponseDto)
                 .toList();
     }

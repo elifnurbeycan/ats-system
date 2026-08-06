@@ -54,4 +54,26 @@ class TenantApiSecurityIntegrationTests {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403));
     }
+
+    // Departman kapsamındaki kullanıcının yönetmediği aday sürecine erişemediğini doğrular.
+    @Test
+    void shouldRejectCandidateProcessOutsideManagedDepartments() throws Exception {
+        mockMvc.perform(get("/api/v1/companies/1/candidate-processes/99")
+                        .with(jwt().jwt(token -> token.claim("companyId", 1L)
+                                        .claim("managedDepartmentIds", java.util.List.of()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_DEPARTMENT_MANAGER"),
+                                        new SimpleGrantedAuthority("CANDIDATE_PROCESS_VIEW"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403));
+    }
+
+    // Şirket kapsamındaki İK kullanıcısının departman filtresine takılmadığını doğrular.
+    @Test
+    void shouldAllowCompanyScopedRoleToReachCandidateProcess() throws Exception {
+        mockMvc.perform(get("/api/v1/companies/1/candidate-processes/99")
+                        .with(jwt().jwt(token -> token.claim("companyId", 1L))
+                                .authorities(new SimpleGrantedAuthority("ROLE_HR"),
+                                        new SimpleGrantedAuthority("CANDIDATE_PROCESS_VIEW"))))
+                .andExpect(status().isNotFound());
+    }
 }

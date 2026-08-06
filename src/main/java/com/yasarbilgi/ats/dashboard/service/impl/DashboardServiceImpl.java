@@ -12,6 +12,8 @@ import com.yasarbilgi.ats.interview.entity.InterviewStatus;
 import com.yasarbilgi.ats.interview.repository.InterviewRepository;
 import com.yasarbilgi.ats.position.entity.PositionStatus;
 import com.yasarbilgi.ats.position.repository.PositionRepository;
+import com.yasarbilgi.ats.security.service.DataScopeService;
+import com.yasarbilgi.ats.common.exception.ForbiddenException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final CandidateProcessRepository candidateProcessRepository;
     private final InterviewRepository interviewRepository;
     private final FollowUpRepository followUpRepository;
+    private final DataScopeService dataScopeService;
 
     // Şirketin temel metriklerini ve adayların aşama dağılımını tek yanıtta oluşturur.
     @Override
@@ -39,6 +42,9 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         Instant now = Instant.now();
+        if (!dataScopeService.hasCompanyScope()) {
+            return getDepartmentSummary(companyId, now);
+        }
         DashboardResponseDto.Summary summary = new DashboardResponseDto.Summary(
                 candidateRepository.countByCompanyIdAndActiveTrue(companyId),
                 positionRepository.countByCompanyIdAndStatusAndActiveTrue(companyId, PositionStatus.OPEN),
@@ -56,5 +62,33 @@ public class DashboardServiceImpl implements DashboardService {
                         stage.getDisplayOrder(), stage.getCandidateCount()))
                 .toList();
         return new DashboardResponseDto(now, summary, stageDistribution);
+    }
+
+    // Dashboard metriklerini yalnızca kullanıcının yönettiği departmanlardan oluşturur.
+    private DashboardResponseDto getDepartmentSummary(Long companyId, Instant now) {
+        var departmentIds = dataScopeService.getManagedDepartmentIds();
+        if (departmentIds.isEmpty()) {
+            throw new ForbiddenException("Yönetilen aktif bir departman bulunmuyor.");
+        }
+        DashboardResponseDto.Summary summary = new DashboardResponseDto.Summary(
+                candidateRepository.countActiveCandidatesByDepartmentIds(companyId, departmentIds),
+                positionRepository.countByCompanyIdAndDepartmentIdInAndStatusAndActiveTrue(
+                        companyId, departmentIds, PositionStatus.OPEN),
+                candidateProcessRepository.countByCompanyIdAndPositionDepartmentIdInAndActiveTrueAndCompletedAtIsNull(
+                        companyId, departmentIds),
+                interviewRepository
+                        .countByCompanyIdAndCandidateProcessPositionDepartmentIdInAndStatusAndScheduledAtBetweenAndActiveTrue(
+                                companyId, departmentIds, InterviewStatus.SCHEDULED,
+                                now, now.plus(7, ChronoUnit.DAYS)),
+                followUpRepository.countByCompanyIdAndCandidateProcessPositionDepartmentIdInAndStatusAndActiveTrue(
+                        companyId, departmentIds, FollowUpStatus.PENDING),
+                followUpRepository
+                        .countByCompanyIdAndCandidateProcessPositionDepartmentIdInAndStatusAndDueAtBeforeAndActiveTrue(
+                                companyId, departmentIds, FollowUpStatus.PENDING, now));
+        var stages = candidateProcessRepository
+                .countActiveProcessesByStageAndDepartmentIds(companyId, departmentIds).stream()
+                .map(stage -> new DashboardResponseDto.StageDistribution(stage.getStageId(), stage.getStageName(),
+                        stage.getStageCode(), stage.getDisplayOrder(), stage.getCandidateCount())).toList();
+        return new DashboardResponseDto(now, summary, stages);
     }
 }

@@ -7,11 +7,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface PositionRepository extends JpaRepository<Position, Long> {
 
     // Şirkette belirtilen durumda bulunan aktif pozisyonların sayısını getirir.
     long countByCompanyIdAndStatusAndActiveTrue(Long companyId, PositionStatus status);
+
+    // İzin verilen departmanlardaki aktif pozisyonları durumuna göre sayar.
+    long countByCompanyIdAndDepartmentIdInAndStatusAndActiveTrue(
+            Long companyId, Set<Long> departmentIds, PositionStatus status);
 
     Optional<Position> findByCompanyIdAndId(Long companyId, Long positionId);
 

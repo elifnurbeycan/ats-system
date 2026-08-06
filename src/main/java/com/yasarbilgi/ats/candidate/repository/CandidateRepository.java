@@ -8,11 +8,22 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import java.util.Set;
 
 public interface CandidateRepository extends JpaRepository<Candidate, Long> {
 
     // Şirketteki aktif adayların toplam sayısını getirir.
     long countByCompanyIdAndActiveTrue(Long companyId);
+
+    // İzin verilen departmanlarda aktif süreci bulunan benzersiz adayların sayısını getirir.
+    @Query("""
+            SELECT COUNT(DISTINCT candidate.id) FROM Candidate candidate
+            JOIN CandidateProcess process ON process.candidate = candidate
+            WHERE candidate.company.id = :companyId AND candidate.active = true AND process.active = true
+              AND process.position.department.id IN :departmentIds
+            """)
+    long countActiveCandidatesByDepartmentIds(@Param("companyId") Long companyId,
+                                              @Param("departmentIds") Set<Long> departmentIds);
 
     Optional<Candidate> findByCompanyIdAndId(
             Long companyId,
@@ -50,6 +61,30 @@ public interface CandidateRepository extends JpaRepository<Candidate, Long> {
             """)
     Page<Candidate> searchActiveCandidates(
             @Param("companyId") Long companyId,
+            @Param("search") String search,
+            Pageable pageable
+    );
+
+    // Adayları kullanıcının yönetebildiği departmanlardaki aktif süreçlerle sınırlandırarak arar.
+    @Query("""
+            SELECT DISTINCT candidate
+            FROM Candidate candidate
+            JOIN CandidateProcess process ON process.candidate = candidate
+            WHERE candidate.company.id = :companyId
+              AND candidate.active = true
+              AND process.active = true
+              AND process.position.department.id IN :departmentIds
+              AND (
+                    :search IS NULL
+                    OR LOWER(CONCAT(candidate.firstName, ' ', candidate.lastName))
+                        LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(candidate.email) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(candidate.linkedinUrl) LIKE LOWER(CONCAT('%', :search, '%'))
+              )
+            """)
+    Page<Candidate> searchActiveCandidatesByDepartmentIds(
+            @Param("companyId") Long companyId,
+            @Param("departmentIds") Set<Long> departmentIds,
             @Param("search") String search,
             Pageable pageable
     );

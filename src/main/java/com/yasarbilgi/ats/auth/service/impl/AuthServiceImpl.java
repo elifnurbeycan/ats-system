@@ -12,6 +12,7 @@ import com.yasarbilgi.ats.permission.entity.Permission;
 import com.yasarbilgi.ats.security.config.JwtProperties;
 import com.yasarbilgi.ats.user.entity.*;
 import com.yasarbilgi.ats.user.repository.UserRepository;
+import com.yasarbilgi.ats.department.repository.DepartmentManagerAssignmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -28,6 +29,7 @@ import java.util.*;
 public class AuthServiceImpl implements AuthService {
     private static final String TOKEN_TYPE = "Bearer";
     private final UserRepository userRepository;
+    private final DepartmentManagerAssignmentRepository managerAssignmentRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtEncoder jwtEncoder;
@@ -85,10 +87,15 @@ public class AuthServiceImpl implements AuthService {
                 .filter(Permission::isActive)
                 .map(permission -> permission.getCode().name())
                 .collect(java.util.stream.Collectors.toSet());
+        Set<Long> managedDepartmentIds = managerAssignmentRepository
+                .findAllByCompanyIdAndUserIdAndActiveTrue(user.getCompany().getId(), user.getId())
+                .stream().map(assignment -> assignment.getDepartment().getId())
+                .collect(java.util.stream.Collectors.toSet());
         JwtClaimsSet claims = JwtClaimsSet.builder().issuer(jwtProperties.issuer())
                 .issuedAt(now).expiresAt(accessExpiry).subject(user.getId().toString())
                 .claim("userId", user.getId()).claim("companyId", user.getCompany().getId())
                 .claim("departmentId", user.getDepartment() == null ? null : user.getDepartment().getId())
+                .claim("managedDepartmentIds", managedDepartmentIds)
                 .claim("roles", roles).claim("permissions", permissions).build();
         String accessToken = jwtEncoder.encode(JwtEncoderParameters.from(
                 JwsHeader.with(MacAlgorithm.HS256).build(), claims)).getTokenValue();

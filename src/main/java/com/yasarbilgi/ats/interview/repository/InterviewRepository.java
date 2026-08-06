@@ -7,11 +7,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 import java.time.Instant;
+import java.util.Set;
 
 public interface InterviewRepository extends JpaRepository<Interview, Long> {
     // Belirli tarih aralığında planlanan aktif görüşmelerin sayısını getirir.
     long countByCompanyIdAndStatusAndScheduledAtBetweenAndActiveTrue(
             Long companyId, InterviewStatus status, Instant start, Instant end);
+    // İzin verilen departmanlardaki planlanmış aktif görüşmeleri tarih aralığında sayar.
+    long countByCompanyIdAndCandidateProcessPositionDepartmentIdInAndStatusAndScheduledAtBetweenAndActiveTrue(
+            Long companyId, Set<Long> departmentIds, InterviewStatus status, Instant start, Instant end);
     // Görüşmeyi süreç ve görüşmeci ayrıntılarıyla şirket sınırında getirir.
     @EntityGraph(attributePaths = {"candidateProcess", "interviewers"})
     Optional<Interview> findWithDetailsByCompanyIdAndCandidateProcessIdAndId(
