@@ -15,3 +15,7 @@ logging:
   level:
     com.yasarbilgi.ats: DEBUG
     org.hibernate.SQL: DEBUG
+
+security:
+  jwt:
+    secret: CHANGE_ME_WITH_AT_LEAST_32_CHARACTERS
