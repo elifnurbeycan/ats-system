@@ -17,4 +17,7 @@ public interface PermissionRepository extends JpaRepository<Permission, Long> {
     List<Permission> findAllByCategoryAndActiveTrueOrderByDisplayOrderAsc(
             PermissionCategory category
     );
+
+    // Sistem rollerini kurmak için tüm aktif permission kayıtlarını getirir.
+    List<Permission> findAllByActiveTrueOrderByDisplayOrderAsc();
 }

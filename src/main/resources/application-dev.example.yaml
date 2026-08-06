@@ -17,5 +17,9 @@ logging:
     org.hibernate.SQL: DEBUG
 
 security:
+  platform-admin:
+    full-name: ${PLATFORM_ADMIN_FULL_NAME:Super Admin}
+    email: ${PLATFORM_ADMIN_EMAIL:}
+    password: ${PLATFORM_ADMIN_PASSWORD:}
   jwt:
     secret: CHANGE_ME_WITH_AT_LEAST_32_CHARACTERS

@@ -6,6 +6,7 @@ import com.yasarbilgi.ats.auth.entity.RefreshToken;
 import com.yasarbilgi.ats.auth.repository.RefreshTokenRepository;
 import com.yasarbilgi.ats.auth.service.AuthService;
 import com.yasarbilgi.ats.common.exception.*;
+import com.yasarbilgi.ats.company.entity.CompanyStatus;
 import com.yasarbilgi.ats.role.entity.Role;
 import com.yasarbilgi.ats.security.config.JwtProperties;
 import com.yasarbilgi.ats.user.entity.*;
@@ -94,7 +95,8 @@ public class AuthServiceImpl implements AuthService {
 
     // Kullanıcının ve şirketinin giriş yapmaya uygun durumda olduğunu doğrular.
     private void validateLoginUser(User user) {
-        if (!user.isActive() || !user.getCompany().isActive() || user.getStatus() != UserStatus.ACTIVE
+        if (!user.isActive() || !user.getCompany().isActive()
+                || user.getCompany().getStatus() != CompanyStatus.ACTIVE || user.getStatus() != UserStatus.ACTIVE
                 || user.getPasswordHash() == null) throw invalidCredentials();
     }
     // Kullanıcı entity'sini oturum profili yanıtına dönüştürür.
