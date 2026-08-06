@@ -7,6 +7,7 @@ import com.yasarbilgi.ats.auth.repository.*;
 import com.yasarbilgi.ats.auth.service.PlatformAuthService;
 import com.yasarbilgi.ats.common.exception.UnauthorizedException;
 import com.yasarbilgi.ats.security.config.JwtProperties;
+import com.yasarbilgi.ats.permission.entity.PermissionCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -57,7 +58,9 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         Instant now = Instant.now(), expiry = now.plus(Duration.ofMinutes(properties.accessTokenMinutes()));
         JwtClaimsSet claims = JwtClaimsSet.builder().issuer(properties.issuer()).issuedAt(now).expiresAt(expiry)
                 .subject("platform:" + admin.getId()).claim("platformAdminId", admin.getId())
-                .claim("principalType", "PLATFORM_ADMIN").claim("roles", Set.of("SUPER_ADMIN")).build();
+                .claim("principalType", "PLATFORM_ADMIN").claim("roles", Set.of("SUPER_ADMIN"))
+                .claim("permissions", Set.of(PermissionCode.PIPELINE_VIEW.name(),
+                        PermissionCode.PIPELINE_MANAGE.name())).build();
         String access = jwtEncoder.encode(JwtEncoderParameters.from(
                 JwsHeader.with(MacAlgorithm.HS256).build(), claims)).getTokenValue();
         String raw = randomToken();

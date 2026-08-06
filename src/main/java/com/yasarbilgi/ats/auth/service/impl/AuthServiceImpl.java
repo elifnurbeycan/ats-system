@@ -8,6 +8,7 @@ import com.yasarbilgi.ats.auth.service.AuthService;
 import com.yasarbilgi.ats.common.exception.*;
 import com.yasarbilgi.ats.company.entity.CompanyStatus;
 import com.yasarbilgi.ats.role.entity.Role;
+import com.yasarbilgi.ats.permission.entity.Permission;
 import com.yasarbilgi.ats.security.config.JwtProperties;
 import com.yasarbilgi.ats.user.entity.*;
 import com.yasarbilgi.ats.user.repository.UserRepository;
@@ -79,10 +80,16 @@ public class AuthServiceImpl implements AuthService {
         Instant accessExpiry = now.plus(Duration.ofMinutes(jwtProperties.accessTokenMinutes()));
         Set<String> roles = user.getRoles().stream().map(Role::getCode)
                 .collect(java.util.stream.Collectors.toSet());
+        Set<String> permissions = user.getRoles().stream()
+                .flatMap(role -> role.getPermissions().stream())
+                .filter(Permission::isActive)
+                .map(permission -> permission.getCode().name())
+                .collect(java.util.stream.Collectors.toSet());
         JwtClaimsSet claims = JwtClaimsSet.builder().issuer(jwtProperties.issuer())
                 .issuedAt(now).expiresAt(accessExpiry).subject(user.getId().toString())
                 .claim("userId", user.getId()).claim("companyId", user.getCompany().getId())
-                .claim("roles", roles).build();
+                .claim("departmentId", user.getDepartment() == null ? null : user.getDepartment().getId())
+                .claim("roles", roles).claim("permissions", permissions).build();
         String accessToken = jwtEncoder.encode(JwtEncoderParameters.from(
                 JwsHeader.with(MacAlgorithm.HS256).build(), claims)).getTokenValue();
         String rawRefreshToken = generateOpaqueToken();

@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -29,7 +30,8 @@ class TenantApiSecurityIntegrationTests {
     @Test
     void shouldRejectCrossCompanyAccess() throws Exception {
         mockMvc.perform(get("/api/v1/companies/2/roles")
-                        .with(jwt().jwt(token -> token.claim("companyId", 1L))))
+                        .with(jwt().jwt(token -> token.claim("companyId", 1L))
+                                .authorities(new SimpleGrantedAuthority("USER_VIEW"))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403));
     }
@@ -38,8 +40,18 @@ class TenantApiSecurityIntegrationTests {
     @Test
     void shouldAllowMatchingCompanyAccess() throws Exception {
         mockMvc.perform(get("/api/v1/companies/1/roles")
-                        .with(jwt().jwt(token -> token.claim("companyId", 1L))))
+                        .with(jwt().jwt(token -> token.claim("companyId", 1L))
+                                .authorities(new SimpleGrantedAuthority("USER_VIEW"))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
+    }
+
+    // Şirket doğru olsa bile gerekli permission bulunmayan isteğin reddedildiğini doğrular.
+    @Test
+    void shouldRejectRequestWithoutRequiredPermission() throws Exception {
+        mockMvc.perform(get("/api/v1/companies/1/roles")
+                        .with(jwt().jwt(token -> token.claim("companyId", 1L))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403));
     }
 }

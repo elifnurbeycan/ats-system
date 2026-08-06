@@ -41,6 +41,12 @@ public class TenantIsolationFilter extends OncePerRequestFilter {
             return;
         }
 
+        if (authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_SUPER_ADMIN"))) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         Number tokenCompanyId = jwtAuthentication.getToken().getClaim("companyId");
         long requestedCompanyId = Long.parseLong(matcher.group(1));
         if (tokenCompanyId == null || tokenCompanyId.longValue() != requestedCompanyId) {
