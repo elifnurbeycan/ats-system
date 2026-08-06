@@ -78,6 +78,7 @@ public class Candidate extends TenantBaseEntity {
     @Column(name = "notice_period_days")
     private Integer noticePeriodDays;
 
+    // Adayın kimlik ve LinkedIn bilgilerini günceller.
     public void updateIdentityInformation(
             String firstName,
             String lastName,
@@ -88,6 +89,7 @@ public class Candidate extends TenantBaseEntity {
         this.linkedinUrl = linkedinUrl;
     }
 
+    // Adayın isteğe bağlı iletişim bilgilerini günceller.
     public void updateContactInformation(
             String email,
             String phone,
@@ -98,6 +100,7 @@ public class Candidate extends TenantBaseEntity {
         this.city = city;
     }
 
+    // Adayın isteğe bağlı mevcut iş ve ihbar süresi bilgilerini günceller.
     public void updateProfessionalInformation(
             String currentCompany,
             String currentJobTitle,
