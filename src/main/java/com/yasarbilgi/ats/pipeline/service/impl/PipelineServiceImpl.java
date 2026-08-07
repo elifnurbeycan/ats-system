@@ -89,11 +89,12 @@ public class PipelineServiceImpl implements PipelineService {
     public PipelineDetailResponseDto deactivate(Long companyId, Long pipelineId) {
         RecruitmentPipeline pipeline = getPipeline(companyId, pipelineId);
         if (pipeline.isDefaultPipeline()) {
-            throw new BusinessRuleException("Varsayılan pipeline pasifleştirilemez.");
+            throw new BusinessRuleException("Varsayılan pipeline silinemez.");
         }
         if (candidateProcessRepository.existsByCompanyIdAndPipelineIdAndActiveTrue(companyId, pipelineId)) {
-            throw new BusinessRuleException("Aktif aday süreçlerinde kullanılan pipeline pasifleştirilemez.");
+            throw new BusinessRuleException("Aktif aday süreçlerinde kullanılan pipeline silinemez.");
         }
+        pipeline.releaseCodeForReuse();
         pipeline.deactivate();
         return toDetail(pipeline);
     }
@@ -155,8 +156,9 @@ public class PipelineServiceImpl implements PipelineService {
     public PipelineStageResponseDto deactivateStage(Long companyId, Long pipelineId, Long stageId) {
         PipelineStage stage = getStage(companyId, pipelineId, stageId);
         if (candidateProcessRepository.existsByCompanyIdAndCurrentStageIdAndActiveTrue(companyId, stageId)) {
-            throw new BusinessRuleException("Aktif adayların bulunduğu aşama pasifleştirilemez.");
+            throw new BusinessRuleException("Aktif adayların bulunduğu aşama silinemez.");
         }
+        stage.releaseUniqueValuesForReuse();
         stage.deactivate();
         return pipelineMapper.toStageResponseDto(stage);
     }

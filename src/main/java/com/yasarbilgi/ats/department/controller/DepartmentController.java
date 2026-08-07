@@ -83,7 +83,7 @@ public class DepartmentController {
             @PathVariable Long departmentId
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                "Departman pasifleştirildi.",
+                "Departman silindi.",
                 departmentService.deactivate(companyId, departmentId)
         ));
     }

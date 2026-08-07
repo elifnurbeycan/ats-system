@@ -90,4 +90,12 @@ public class PipelineStage extends TenantBaseEntity {
     public void changeStageType(PipelineStageType stageType) {
         this.stageType = stageType;
     }
+
+    public void releaseUniqueValuesForReuse() {
+        String suffix = "__ARCHIVED_" + getId();
+        int prefixLength = Math.max(0, 50 - suffix.length());
+        String prefix = code.length() > prefixLength ? code.substring(0, prefixLength) : code;
+        this.code = prefix + suffix;
+        this.displayOrder = Math.toIntExact(-getId());
+    }
 }

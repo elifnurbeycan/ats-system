@@ -88,7 +88,7 @@ public class InteractionController {
             @PathVariable Long interactionId
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                "İletişim kaydı pasifleştirildi.",
+                "İletişim kaydı silindi.",
                 interactionService.deactivate(companyId, candidateId, interactionId)
         ));
     }

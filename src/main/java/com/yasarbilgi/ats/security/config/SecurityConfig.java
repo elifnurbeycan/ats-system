@@ -80,7 +80,7 @@ public class SecurityConfig {
                         .hasAuthority("DEPARTMENT_CREATE")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/companies/*/departments/*")
                         .hasAuthority("DEPARTMENT_UPDATE")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/companies/*/departments/*")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/companies/*/departments/**")
                         .hasAuthority("DEPARTMENT_DEACTIVATE")
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/companies/*/positions/**")
