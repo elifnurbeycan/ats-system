@@ -6,6 +6,7 @@ import com.yasarbilgi.ats.interaction.dto.response.InteractionResponseDto;
 import com.yasarbilgi.ats.interaction.entity.InteractionChannel;
 
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
 
 public interface InteractionService {
 
@@ -17,11 +18,13 @@ public interface InteractionService {
     );
 
     // Aday iletişimlerini süreç ve kanal seçenekleriyle filtreleyerek listeler.
-    List<InteractionResponseDto> getAll(
+    PageResponse<InteractionResponseDto> getAll(
             Long companyId,
             Long candidateId,
             Long candidateProcessId,
-            InteractionChannel channel
+            InteractionChannel channel,
+            int page,
+            int size
     );
 
     // İletişim kaydının ayrıntılarını günceller.

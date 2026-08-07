@@ -47,12 +47,12 @@ public class DepartmentDataScopeFilter extends OncePerRequestFilter {
         Set<Long> departmentIds = dataScopeService.getManagedDepartmentIds();
         Matcher processMatcher = PROCESS_PATH.matcher(path);
         if (processMatcher.matches() && !canAccessProcess(processMatcher, departmentIds)) {
-            deny(response);
+            deny(request, response);
             return;
         }
         Matcher candidateMatcher = CANDIDATE_PATH.matcher(path);
         if (candidateMatcher.matches() && !canAccessCandidate(candidateMatcher, departmentIds)) {
-            deny(response);
+            deny(request, response);
             return;
         }
         filterChain.doFilter(request, response);
@@ -73,8 +73,8 @@ public class DepartmentDataScopeFilter extends OncePerRequestFilter {
     }
 
     // Kapsam dışı kaynak isteğine standart 403 yanıtı döner.
-    private void deny(HttpServletResponse response) throws IOException {
-        errorWriter.write(response, HttpStatus.FORBIDDEN.value(),
+    private void deny(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        errorWriter.write(request, response, HttpStatus.FORBIDDEN.value(),
                 "Bu departmana ait verilere erişim yetkiniz bulunmuyor.");
     }
 }

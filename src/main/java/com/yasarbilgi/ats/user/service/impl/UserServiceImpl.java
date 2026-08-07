@@ -26,6 +26,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import com.yasarbilgi.ats.common.response.PageResponse;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 @Service
 @RequiredArgsConstructor
@@ -68,16 +71,21 @@ public class UserServiceImpl implements UserService {
 
     // Kullanıcıları tüm şirketten veya seçilen departmandan getirir.
     @Override
-    public List<UserResponseDto> getAll(Long companyId, Long departmentId) {
+    public PageResponse<UserResponseDto> getAll(Long companyId, Long departmentId, int page, int size) {
         getCompany(companyId);
+        validatePage(page, size);
+        var pageable = PageRequest.of(page, size, Sort.by("firstName").ascending().and(Sort.by("lastName").ascending()));
+        if (departmentId != null) getDepartment(companyId, departmentId);
+        var users = departmentId == null
+                ? userRepository.findAllByCompanyIdAndActiveTrue(companyId, pageable)
+                : userRepository.findAllByCompanyIdAndDepartmentIdAndActiveTrue(companyId, departmentId, pageable);
+        return PageResponse.from(users, userMapper::toResponseDto);
+    }
 
-        List<User> users = departmentId == null
-                ? userRepository.findAllByCompanyIdOrderByFirstNameAscLastNameAsc(companyId)
-                : getUsersByDepartment(companyId, departmentId);
-
-        return users.stream()
-                .map(userMapper::toResponseDto)
-                .toList();
+    private void validatePage(int page, int size) {
+        if (page < 0 || size < 1 || size > 200) {
+            throw new BusinessRuleException("Sayfa numarası sıfırdan küçük, sayfa boyutu 1-200 aralığı dışında olamaz.");
+        }
     }
 
     // Kullanıcı detayını şirket sınırı içerisinde getirir.

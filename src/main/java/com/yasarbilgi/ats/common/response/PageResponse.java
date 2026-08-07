@@ -11,6 +11,7 @@ public record PageResponse<T>(
         int size,
         long totalElements,
         int totalPages,
+        boolean first,
         boolean last
 ) {
 
@@ -22,6 +23,7 @@ public record PageResponse<T>(
                 source.getSize(),
                 source.getTotalElements(),
                 source.getTotalPages(),
+                source.isFirst(),
                 source.isLast()
         );
     }

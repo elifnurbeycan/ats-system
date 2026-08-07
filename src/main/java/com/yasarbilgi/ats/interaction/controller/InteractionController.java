@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
 
 @RestController
 @RequiredArgsConstructor
@@ -45,18 +46,22 @@ public class InteractionController {
 
     // Aday iletişimlerini isteğe bağlı süreç ve kanal filtresiyle listeler.
     @GetMapping
-    public ResponseEntity<ApiResponse<List<InteractionResponseDto>>> getAll(
+    public ResponseEntity<ApiResponse<PageResponse<InteractionResponseDto>>> getAll(
             @PathVariable Long companyId,
             @PathVariable Long candidateId,
             @RequestParam(required = false) Long candidateProcessId,
-            @RequestParam(required = false) InteractionChannel channel
+            @RequestParam(required = false) InteractionChannel channel,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 interactionService.getAll(
                         companyId,
                         candidateId,
                         candidateProcessId,
-                        channel
+                        channel,
+                        page,
+                        size
                 )
         ));
     }

@@ -50,7 +50,7 @@ public class TenantIsolationFilter extends OncePerRequestFilter {
         Number tokenCompanyId = jwtAuthentication.getToken().getClaim("companyId");
         long requestedCompanyId = Long.parseLong(matcher.group(1));
         if (tokenCompanyId == null || tokenCompanyId.longValue() != requestedCompanyId) {
-            errorWriter.write(response, HttpStatus.FORBIDDEN.value(),
+            errorWriter.write(request, response, HttpStatus.FORBIDDEN.value(),
                     "Başka bir şirkete ait verilere erişemezsiniz.");
             return;
         }

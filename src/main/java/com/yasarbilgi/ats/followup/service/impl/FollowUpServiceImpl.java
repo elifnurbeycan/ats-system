@@ -18,6 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 @Service @RequiredArgsConstructor @Transactional(readOnly = true)
 public class FollowUpServiceImpl implements FollowUpService {
@@ -41,13 +44,14 @@ public class FollowUpServiceImpl implements FollowUpService {
         return mapper.toResponseDto(followUpRepository.save(followUp));
     }
     // Aday görevlerini isteğe bağlı durum ve sorumlu filtresiyle getirir.
-    @Override public List<FollowUpResponseDto> getAll(Long companyId, Long candidateId,
-                                                      FollowUpStatus status, Long assignedToUserId) {
+    @Override public PageResponse<FollowUpResponseDto> getAll(Long companyId, Long candidateId,
+                                                              FollowUpStatus status, Long assignedToUserId,
+                                                              int page, int size) {
         getCandidate(companyId, candidateId);
-        return followUpRepository.findAllByCompanyIdAndCandidateIdAndActiveTrueOrderByDueAtAsc(companyId, candidateId)
-                .stream().filter(item -> status == null || item.getStatus() == status)
-                .filter(item -> assignedToUserId == null || item.getAssignedTo().getId().equals(assignedToUserId))
-                .map(mapper::toResponseDto).toList();
+        if (page < 0 || size < 1 || size > 200) throw new BusinessRuleException("Geçersiz sayfalama bilgisi.");
+        var result = followUpRepository.searchActive(companyId, candidateId, status, assignedToUserId,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "dueAt")));
+        return PageResponse.from(result, mapper::toResponseDto);
     }
     // Yalnızca bekleyen takip görevinin planlama bilgilerini günceller.
     @Override @Transactional

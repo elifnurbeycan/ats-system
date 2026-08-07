@@ -128,6 +128,10 @@ public class AuthServiceImpl implements AuthService {
                 user.getCompany().getCode(), user.getFullName(), user.getEmail(),
                 user.getDepartment() == null ? null : user.getDepartment().getId(),
                 user.getRoles().stream().map(Role::getCode)
+                        .collect(java.util.stream.Collectors.toSet()),
+                user.getRoles().stream().flatMap(role -> role.getPermissions().stream())
+                        .filter(Permission::isActive)
+                        .map(permission -> permission.getCode().name())
                         .collect(java.util.stream.Collectors.toSet()));
     }
     // Kriptografik olarak rastgele ve URL güvenli refresh token üretir.
