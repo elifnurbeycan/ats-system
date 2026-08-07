@@ -67,6 +67,12 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Shared counters for distributed login rate limiting -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
         <!-- PostgreSQL driver -->
         <dependency>
             <groupId>org.postgresql</groupId>

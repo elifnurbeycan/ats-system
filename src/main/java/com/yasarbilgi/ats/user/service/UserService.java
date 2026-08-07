@@ -6,6 +6,7 @@ import com.yasarbilgi.ats.user.dto.request.UpdateUserRolesRequestDto;
 import com.yasarbilgi.ats.user.dto.response.UserResponseDto;
 
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
 
 public interface UserService {
 
@@ -13,7 +14,7 @@ public interface UserService {
     UserResponseDto create(Long companyId, CreateUserRequestDto request);
 
     // Şirkete ait kullanıcıları isteğe bağlı departman filtresiyle listeler.
-    List<UserResponseDto> getAll(Long companyId, Long departmentId);
+    PageResponse<UserResponseDto> getAll(Long companyId, Long departmentId, int page, int size);
 
     // Şirkete ait tek bir kullanıcının detayını getirir.
     UserResponseDto getById(Long companyId, Long userId);

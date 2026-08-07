@@ -5,6 +5,7 @@ import com.yasarbilgi.ats.candidatenote.dto.request.UpdateCandidateNoteRequestDt
 import com.yasarbilgi.ats.candidatenote.dto.response.CandidateNoteResponseDto;
 
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
 
 public interface CandidateNoteService {
 
@@ -16,10 +17,12 @@ public interface CandidateNoteService {
     );
 
     // Aday notlarını isteğe bağlı süreç filtresiyle listeler.
-    List<CandidateNoteResponseDto> getAll(
+    PageResponse<CandidateNoteResponseDto> getAll(
             Long companyId,
             Long candidateId,
-            Long candidateProcessId
+            Long candidateProcessId,
+            int page,
+            int size
     );
 
     // Aday notunun metin içeriğini günceller.

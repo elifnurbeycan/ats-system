@@ -17,6 +17,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
+import com.yasarbilgi.ats.common.exception.BusinessRuleException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 @Service
 @RequiredArgsConstructor
@@ -55,33 +60,37 @@ public class CandidateNoteServiceImpl implements CandidateNoteService {
 
     // Adayın genel ve süreç notlarını veya yalnızca seçilen sürecin notlarını getirir.
     @Override
-    public List<CandidateNoteResponseDto> getAll(
+    public PageResponse<CandidateNoteResponseDto> getAll(
             Long companyId,
             Long candidateId,
-            Long candidateProcessId
+            Long candidateProcessId,
+            int page,
+            int size
     ) {
         getCandidate(companyId, candidateId);
 
-        List<CandidateNote> notes;
+        if (page < 0 || size < 1 || size > 200) throw new BusinessRuleException("Geçersiz sayfalama bilgisi.");
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<CandidateNote> notes;
         if (candidateProcessId == null) {
             notes = candidateNoteRepository
-                    .findAllByCompanyIdAndCandidateIdAndActiveTrueOrderByCreatedAtDesc(
+                    .findAllByCompanyIdAndCandidateIdAndActiveTrue(
                             companyId,
-                            candidateId
+                            candidateId,
+                            pageable
                     );
         } else {
             getCandidateProcess(companyId, candidateId, candidateProcessId);
             notes = candidateNoteRepository
-                    .findAllByCompanyIdAndCandidateIdAndCandidateProcessIdAndActiveTrueOrderByCreatedAtDesc(
+                    .findAllByCompanyIdAndCandidateIdAndCandidateProcessIdAndActiveTrue(
                             companyId,
                             candidateId,
-                            candidateProcessId
+                            candidateProcessId,
+                            pageable
                     );
         }
 
-        return notes.stream()
-                .map(candidateNoteMapper::toResponseDto)
-                .toList();
+        return PageResponse.from(notes, candidateNoteMapper::toResponseDto);
     }
 
     // Aktif aday notunun metin içeriğini günceller.

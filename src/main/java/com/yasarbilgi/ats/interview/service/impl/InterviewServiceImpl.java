@@ -15,6 +15,9 @@ import com.yasarbilgi.ats.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import com.yasarbilgi.ats.common.response.PageResponse;
 
 import java.util.*;
 
@@ -46,22 +49,23 @@ public class InterviewServiceImpl implements InterviewService {
 
     // Süreç görüşmelerini kullanıcının veri kapsamına göre getirir.
     @Override
-    public List<InterviewResponseDto> getAll(Long companyId, Long processId) {
+    public PageResponse<InterviewResponseDto> getAll(Long companyId, Long processId, int page, int size) {
         getProcess(companyId, processId);
+        validatePage(page, size);
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "scheduledAt"));
         if (dataScopeService.hasInterviewerScope()) {
             Long userId = dataScopeService.getCurrentUserId();
             if (!interviewRepository.existsByCompanyIdAndCandidateProcessIdAndInterviewersIdAndActiveTrue(
                     companyId, processId, userId)) {
                 throw new ForbiddenException("Bu sürece ait atanmış bir görüşmeniz bulunmuyor.");
             }
-            return interviewRepository
-                    .findAllByCompanyIdAndCandidateProcessIdAndInterviewersIdAndActiveTrueOrderByScheduledAtAsc(
-                            companyId, processId, userId)
-                    .stream().map(mapper::toResponseDto).toList();
+            return PageResponse.from(interviewRepository
+                    .findAllByCompanyIdAndCandidateProcessIdAndInterviewersIdAndActiveTrue(
+                            companyId, processId, userId, pageable), mapper::toResponseDto);
         }
-        return interviewRepository
-                .findAllByCompanyIdAndCandidateProcessIdAndActiveTrueOrderByScheduledAtAsc(companyId, processId)
-                .stream().map(mapper::toResponseDto).toList();
+        return PageResponse.from(interviewRepository
+                .findAllByCompanyIdAndCandidateProcessIdAndActiveTrue(companyId, processId, pageable),
+                mapper::toResponseDto);
     }
 
     // Yalnızca planlanmış görüşmenin ayrıntılarını günceller.
@@ -171,5 +175,11 @@ public class InterviewServiceImpl implements InterviewService {
     // Boş isteğe bağlı metinleri null değerine dönüştürür.
     private String text(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private void validatePage(int page, int size) {
+        if (page < 0 || size < 1 || size > 200) {
+            throw new BusinessRuleException("Sayfa numarası sıfırdan küçük, sayfa boyutu 1-200 dışında olamaz.");
+        }
     }
 }

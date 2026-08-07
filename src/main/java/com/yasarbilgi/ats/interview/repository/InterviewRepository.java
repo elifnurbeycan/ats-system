@@ -4,6 +4,8 @@ import com.yasarbilgi.ats.interview.entity.Interview;
 import com.yasarbilgi.ats.interview.entity.InterviewStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.Optional;
 import java.time.Instant;
@@ -24,11 +26,17 @@ public interface InterviewRepository extends JpaRepository<Interview, Long> {
     @EntityGraph(attributePaths = "interviewers")
     List<Interview> findAllByCompanyIdAndCandidateProcessIdAndActiveTrueOrderByScheduledAtAsc(
             Long companyId, Long candidateProcessId);
+    @EntityGraph(attributePaths = "interviewers")
+    Page<Interview> findAllByCompanyIdAndCandidateProcessIdAndActiveTrue(
+            Long companyId, Long candidateProcessId, Pageable pageable);
 
     // Görüşmecinin atandığı süreç görüşmelerini tarih sırasıyla getirir.
     @EntityGraph(attributePaths = "interviewers")
     List<Interview> findAllByCompanyIdAndCandidateProcessIdAndInterviewersIdAndActiveTrueOrderByScheduledAtAsc(
             Long companyId, Long candidateProcessId, Long interviewerId);
+    @EntityGraph(attributePaths = "interviewers")
+    Page<Interview> findAllByCompanyIdAndCandidateProcessIdAndInterviewersIdAndActiveTrue(
+            Long companyId, Long candidateProcessId, Long interviewerId, Pageable pageable);
 
     // Kullanıcının görüşmeye görüşmeci olarak atanıp atanmadığını kontrol eder.
     boolean existsByCompanyIdAndCandidateProcessIdAndIdAndInterviewersIdAndActiveTrue(

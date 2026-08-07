@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
 
 @RestController
 @RequiredArgsConstructor
@@ -44,13 +45,15 @@ public class CandidateNoteController {
 
     // Aday notlarını isteğe bağlı aday süreci filtresiyle listeler.
     @GetMapping
-    public ResponseEntity<ApiResponse<List<CandidateNoteResponseDto>>> getAll(
+    public ResponseEntity<ApiResponse<PageResponse<CandidateNoteResponseDto>>> getAll(
             @PathVariable Long companyId,
             @PathVariable Long candidateId,
-            @RequestParam(required = false) Long candidateProcessId
+            @RequestParam(required = false) Long candidateProcessId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                candidateNoteService.getAll(companyId, candidateId, candidateProcessId)
+                candidateNoteService.getAll(companyId, candidateId, candidateProcessId, page, size)
         ));
     }
 

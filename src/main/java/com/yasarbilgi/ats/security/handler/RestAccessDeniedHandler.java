@@ -20,7 +20,7 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response,
                        AccessDeniedException exception) throws IOException, ServletException {
-        errorWriter.write(response, HttpStatus.FORBIDDEN.value(),
+        errorWriter.write(request, response, HttpStatus.FORBIDDEN.value(),
                 "Bu işlem için yetkiniz bulunmuyor.");
     }
 

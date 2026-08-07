@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
 
 @RestController @RequiredArgsConstructor
 @RequestMapping("/api/v1/companies/{companyId}/candidate-processes/{candidateProcessId}/interviews")
@@ -22,9 +23,11 @@ public class InterviewController {
                 service.create(companyId, candidateProcessId, request)));
     }
     // Sürece ait görüşmeleri listeler.
-    @GetMapping public ResponseEntity<ApiResponse<List<InterviewResponseDto>>> getAll(
-            @PathVariable Long companyId, @PathVariable Long candidateProcessId) {
-        return ResponseEntity.ok(ApiResponse.success(service.getAll(companyId, candidateProcessId)));
+    @GetMapping public ResponseEntity<ApiResponse<PageResponse<InterviewResponseDto>>> getAll(
+            @PathVariable Long companyId, @PathVariable Long candidateProcessId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(service.getAll(companyId, candidateProcessId, page, size)));
     }
     // Planlanmış görüşmenin ayrıntılarını günceller.
     @PutMapping("/{interviewId}") public ResponseEntity<ApiResponse<InterviewResponseDto>> update(

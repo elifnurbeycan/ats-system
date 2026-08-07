@@ -19,6 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
+import com.yasarbilgi.ats.common.exception.BusinessRuleException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 @Service
 @RequiredArgsConstructor
@@ -61,35 +65,21 @@ public class InteractionServiceImpl implements InteractionService {
 
     // İletişimleri isteğe bağlı süreç ve kanal filtreleriyle en yeniden eskiye getirir.
     @Override
-    public List<InteractionResponseDto> getAll(
+    public PageResponse<InteractionResponseDto> getAll(
             Long companyId,
             Long candidateId,
             Long candidateProcessId,
-            InteractionChannel channel
+            InteractionChannel channel,
+            int page,
+            int size
     ) {
         getCandidate(companyId, candidateId);
 
-        List<Interaction> interactions;
-        if (candidateProcessId == null) {
-            interactions = interactionRepository
-                    .findAllByCompanyIdAndCandidateIdAndActiveTrueOrderByOccurredAtDesc(
-                            companyId,
-                            candidateId
-                    );
-        } else {
-            getCandidateProcess(companyId, candidateId, candidateProcessId);
-            interactions = interactionRepository
-                    .findAllByCompanyIdAndCandidateIdAndCandidateProcessIdAndActiveTrueOrderByOccurredAtDesc(
-                            companyId,
-                            candidateId,
-                            candidateProcessId
-                    );
-        }
-
-        return interactions.stream()
-                .filter(interaction -> channel == null || interaction.getChannel() == channel)
-                .map(interactionMapper::toResponseDto)
-                .toList();
+        if (candidateProcessId != null) getCandidateProcess(companyId, candidateId, candidateProcessId);
+        if (page < 0 || size < 1 || size > 200) throw new BusinessRuleException("Geçersiz sayfalama bilgisi.");
+        var interactions = interactionRepository.searchActive(companyId, candidateId, candidateProcessId, channel,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "occurredAt")));
+        return PageResponse.from(interactions, interactionMapper::toResponseDto);
     }
 
     // Aktif iletişim kaydının kanal, yön, zaman ve metin bilgilerini günceller.

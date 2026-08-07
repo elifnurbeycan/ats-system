@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
 
 @RestController
 @RequiredArgsConstructor
@@ -44,12 +45,14 @@ public class UserController {
 
     // Şirket kullanıcılarını isteğe bağlı departman filtresiyle listeler.
     @GetMapping
-    public ResponseEntity<ApiResponse<List<UserResponseDto>>> getAll(
+    public ResponseEntity<ApiResponse<PageResponse<UserResponseDto>>> getAll(
             @PathVariable Long companyId,
-            @RequestParam(required = false) Long departmentId
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                userService.getAll(companyId, departmentId)
+                userService.getAll(companyId, departmentId, page, size)
         ));
     }
 

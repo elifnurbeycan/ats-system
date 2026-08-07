@@ -5,8 +5,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface CandidateNoteRepository extends JpaRepository<CandidateNote, Long> {
+
+    List<CandidateNote> findAllByCompanyIdAndCandidateIdAndActiveTrueOrderByCreatedAtDesc(
+            Long companyId, Long candidateId);
 
     // Adaya ait notu şirket sınırı içerisinde getirir.
     Optional<CandidateNote> findByCompanyIdAndCandidateIdAndId(
@@ -16,16 +21,18 @@ public interface CandidateNoteRepository extends JpaRepository<CandidateNote, Lo
     );
 
     // Adaya ait aktif notları en yeni not önce olacak şekilde getirir.
-    List<CandidateNote> findAllByCompanyIdAndCandidateIdAndActiveTrueOrderByCreatedAtDesc(
+    Page<CandidateNote> findAllByCompanyIdAndCandidateIdAndActiveTrue(
             Long companyId,
-            Long candidateId
+            Long candidateId,
+            Pageable pageable
     );
 
     // Adayın belirli sürecine ait aktif notları en yeni not önce olacak şekilde getirir.
-    List<CandidateNote>
-    findAllByCompanyIdAndCandidateIdAndCandidateProcessIdAndActiveTrueOrderByCreatedAtDesc(
+    Page<CandidateNote>
+    findAllByCompanyIdAndCandidateIdAndCandidateProcessIdAndActiveTrue(
             Long companyId,
             Long candidateId,
-            Long candidateProcessId
+            Long candidateProcessId,
+            Pageable pageable
     );
 }

@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
 
 @RestController @RequiredArgsConstructor
 @RequestMapping("/api/v1/companies/{companyId}/candidates/{candidateId}/follow-ups")
@@ -23,12 +24,14 @@ public class FollowUpController {
                 service.create(companyId, candidateId, request)));
     }
     // Aday görevlerini durum ve sorumlu filtreleriyle listeler.
-    @GetMapping public ResponseEntity<ApiResponse<List<FollowUpResponseDto>>> getAll(
+    @GetMapping public ResponseEntity<ApiResponse<PageResponse<FollowUpResponseDto>>> getAll(
             @PathVariable Long companyId, @PathVariable Long candidateId,
             @RequestParam(required = false) FollowUpStatus status,
-            @RequestParam(required = false) Long assignedToUserId) {
+            @RequestParam(required = false) Long assignedToUserId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(ApiResponse.success(service.getAll(
-                companyId, candidateId, status, assignedToUserId)));
+                companyId, candidateId, status, assignedToUserId, page, size)));
     }
     // Bekleyen takip görevinin ayrıntılarını günceller.
     @PutMapping("/{followUpId}") public ResponseEntity<ApiResponse<FollowUpResponseDto>> update(
