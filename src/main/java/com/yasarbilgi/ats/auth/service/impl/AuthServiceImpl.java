@@ -9,6 +9,7 @@ import com.yasarbilgi.ats.common.exception.*;
 import com.yasarbilgi.ats.company.entity.CompanyStatus;
 import com.yasarbilgi.ats.role.entity.Role;
 import com.yasarbilgi.ats.permission.entity.Permission;
+import com.yasarbilgi.ats.permission.entity.PermissionCode;
 import com.yasarbilgi.ats.security.config.JwtProperties;
 import com.yasarbilgi.ats.user.entity.*;
 import com.yasarbilgi.ats.user.repository.UserRepository;
@@ -29,6 +30,7 @@ import java.util.*;
 public class AuthServiceImpl implements AuthService {
     private static final String TOKEN_TYPE = "Bearer";
     private static final String DEPARTMENT_MANAGER_ROLE_CODE = "DEPARTMENT_MANAGER";
+    private static final String HR_ROLE_CODE = "HR";
     private final UserRepository userRepository;
     private final DepartmentManagerAssignmentRepository managerAssignmentRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -83,11 +85,7 @@ public class AuthServiceImpl implements AuthService {
         Instant accessExpiry = now.plus(Duration.ofMinutes(jwtProperties.accessTokenMinutes()));
         Set<String> roles = user.getRoles().stream().map(Role::getCode)
                 .collect(java.util.stream.Collectors.toSet());
-        Set<String> permissions = user.getRoles().stream()
-                .flatMap(role -> role.getPermissions().stream())
-                .filter(Permission::isActive)
-                .map(permission -> permission.getCode().name())
-                .collect(java.util.stream.Collectors.toSet());
+        Set<String> permissions = resolvePermissions(user, roles);
         Set<Long> managedDepartmentIds = new HashSet<>(managerAssignmentRepository
                 .findAllByCompanyIdAndUserIdAndActiveTrue(user.getCompany().getId(), user.getId())
                 .stream().map(assignment -> assignment.getDepartment().getId())
@@ -124,15 +122,25 @@ public class AuthServiceImpl implements AuthService {
     }
     // Kullanıcı entity'sini oturum profili yanıtına dönüştürür.
     private AuthenticatedUserResponseDto toUserResponse(User user) {
+        Set<String> roles = user.getRoles().stream().map(Role::getCode)
+                .collect(java.util.stream.Collectors.toSet());
         return new AuthenticatedUserResponseDto(user.getId(), user.getCompany().getId(),
                 user.getCompany().getCode(), user.getFullName(), user.getEmail(),
                 user.getDepartment() == null ? null : user.getDepartment().getId(),
-                user.getRoles().stream().map(Role::getCode)
-                        .collect(java.util.stream.Collectors.toSet()),
-                user.getRoles().stream().flatMap(role -> role.getPermissions().stream())
-                        .filter(Permission::isActive)
-                        .map(permission -> permission.getCode().name())
-                        .collect(java.util.stream.Collectors.toSet()));
+                roles, resolvePermissions(user, roles));
+    }
+
+    private Set<String> resolvePermissions(User user, Set<String> roles) {
+        if (roles.contains(HR_ROLE_CODE)) {
+            return Arrays.stream(PermissionCode.values())
+                    .map(Enum::name)
+                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        }
+        return user.getRoles().stream()
+                .flatMap(role -> role.getPermissions().stream())
+                .filter(Permission::isActive)
+                .map(permission -> permission.getCode().name())
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
     // Kriptografik olarak rastgele ve URL güvenli refresh token üretir.
     private String generateOpaqueToken() { byte[] bytes = new byte[32]; secureRandom.nextBytes(bytes);

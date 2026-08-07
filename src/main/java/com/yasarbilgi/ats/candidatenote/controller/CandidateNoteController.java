@@ -79,7 +79,7 @@ public class CandidateNoteController {
             @PathVariable Long noteId
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                "Aday notu pasifleştirildi.",
+                "Aday notu silindi.",
                 candidateNoteService.deactivate(companyId, candidateId, noteId)
         ));
     }

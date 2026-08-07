@@ -9,6 +9,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -74,6 +75,15 @@ class TenantApiSecurityIntegrationTests {
                         .with(jwt().jwt(token -> token.claim("companyId", 1L))
                                 .authorities(new SimpleGrantedAuthority("ROLE_HR"),
                                         new SimpleGrantedAuthority("CANDIDATE_PROCESS_VIEW"))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldAllowDepartmentDeactivateWithRequiredPermission() throws Exception {
+        mockMvc.perform(patch("/api/v1/companies/1/departments/99/deactivate")
+                        .with(jwt().jwt(token -> token.claim("companyId", 1L))
+                                .authorities(new SimpleGrantedAuthority("ROLE_HR"),
+                                        new SimpleGrantedAuthority("DEPARTMENT_DEACTIVATE"))))
                 .andExpect(status().isNotFound());
     }
 }

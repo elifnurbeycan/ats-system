@@ -100,7 +100,7 @@ public class UserController {
             @PathVariable Long userId
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                "Kullanıcı pasifleştirildi.",
+                "Kullanıcı silindi.",
                 userService.deactivate(companyId, userId)
         ));
     }

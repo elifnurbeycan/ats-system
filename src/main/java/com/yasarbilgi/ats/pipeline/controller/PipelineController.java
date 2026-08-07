@@ -56,7 +56,7 @@ public class PipelineController {
     @PatchMapping("/{pipelineId}/deactivate")
     public ResponseEntity<ApiResponse<PipelineDetailResponseDto>> deactivate(
             @PathVariable Long companyId, @PathVariable Long pipelineId) {
-        return ResponseEntity.ok(ApiResponse.success("Pipeline pasifleştirildi.",
+        return ResponseEntity.ok(ApiResponse.success("Pipeline silindi.",
                 pipelineService.deactivate(companyId, pipelineId)));
     }
 
@@ -101,7 +101,7 @@ public class PipelineController {
     @PatchMapping("/{pipelineId}/stages/{stageId}/deactivate")
     public ResponseEntity<ApiResponse<PipelineStageResponseDto>> deactivateStage(
             @PathVariable Long companyId, @PathVariable Long pipelineId, @PathVariable Long stageId) {
-        return ResponseEntity.ok(ApiResponse.success("Aşama pasifleştirildi.",
+        return ResponseEntity.ok(ApiResponse.success("Aşama silindi.",
                 pipelineService.deactivateStage(companyId, pipelineId, stageId)));
     }
 }

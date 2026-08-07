@@ -71,7 +71,7 @@ public class CandidateController {
             @PathVariable Long candidateId
     ) {
         candidateService.deactivate(companyId, candidateId);
-        return ResponseEntity.ok(ApiResponse.success("Aday pasifleştirildi.", null));
+        return ResponseEntity.ok(ApiResponse.success("Aday silindi.", null));
     }
 }
 
