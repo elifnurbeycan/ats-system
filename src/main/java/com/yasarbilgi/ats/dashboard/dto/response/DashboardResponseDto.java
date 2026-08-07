@@ -6,7 +6,9 @@ import java.util.List;
 public record DashboardResponseDto(
         Instant generatedAt,
         Summary summary,
-        List<StageDistribution> stageDistribution
+        List<StageDistribution> stageDistribution,
+        PeriodAnalytics weeklyAnalytics,
+        PeriodAnalytics monthlyAnalytics
 ) {
     public record Summary(
             long activeCandidateCount,
@@ -23,5 +25,14 @@ public record DashboardResponseDto(
             String stageCode,
             Integer displayOrder,
             long candidateCount
+    ) {}
+
+    public record PeriodAnalytics(
+            Instant periodStart,
+            long newCandidateCount,
+            long newApplicationCount,
+            long openedPositionCount,
+            long hiredCount,
+            long rejectedCount
     ) {}
 }
