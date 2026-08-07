@@ -29,10 +29,12 @@ import com.yasarbilgi.ats.pipeline.repository.RecruitmentPipelineRepository;
 import com.yasarbilgi.ats.position.entity.Position;
 import com.yasarbilgi.ats.position.entity.PositionStatus;
 import com.yasarbilgi.ats.position.repository.PositionRepository;
+import com.yasarbilgi.ats.notification.event.ManagerReviewEnteredEvent;
 import com.yasarbilgi.ats.security.service.DataScopeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -55,6 +57,7 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
     private final CandidateProcessStageHistoryRepository stageHistoryRepository;
     private final CandidateProcessMapper candidateProcessMapper;
     private final DataScopeService dataScopeService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -149,6 +152,18 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
                 .build());
 
         process.changeStage(newStage);
+
+        if ("MANAGER_REVIEW".equalsIgnoreCase(newStage.getCode())) {
+            eventPublisher.publishEvent(new ManagerReviewEnteredEvent(
+                    companyId,
+                    process.getId(),
+                    process.getCandidate().getId(),
+                    process.getCandidate().getFirstName() + " " + process.getCandidate().getLastName(),
+                    process.getPosition().getTitle(),
+                    process.getPosition().getDepartment().getId(),
+                    process.getPosition().getDepartment().getName()
+            ));
+        }
 
         return candidateProcessMapper.toResponseDto(process);
     }

@@ -1,5 +1,7 @@
 package com.yasarbilgi.ats.candidateprocess.dto.response;
 
+import java.time.Instant;
+
 public record CandidateProcessResponseDto(
         Long id,
         Long candidateId,
@@ -7,6 +9,8 @@ public record CandidateProcessResponseDto(
         Long positionId,
         Long pipelineId,
         Long currentStageId,
-        String currentStageName
+        String currentStageName,
+        Instant createdAt,
+        Instant updatedAt
 ) {
 }

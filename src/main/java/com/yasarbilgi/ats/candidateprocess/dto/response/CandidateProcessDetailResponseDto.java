@@ -18,6 +18,8 @@ public record CandidateProcessDetailResponseDto(
         String currentStageName,
         PipelineStageType currentStageType,
         Instant completedAt,
-        boolean active
+        boolean active,
+        Instant createdAt,
+        Instant updatedAt
 ) {
 }

@@ -35,8 +35,7 @@ public class CompanyServiceImpl implements CompanyService {
     private static final Set<PermissionCode> INTERVIEWER_PERMISSIONS = EnumSet.of(
             PermissionCode.CANDIDATE_VIEW, PermissionCode.CANDIDATE_PROCESS_VIEW,
             PermissionCode.INTERVIEW_VIEW, PermissionCode.INTERVIEW_EVALUATE);
-    private static final Set<PermissionCode> HR_PERMISSIONS = EnumSet.complementOf(
-            EnumSet.of(PermissionCode.PIPELINE_MANAGE));
+    private static final Set<PermissionCode> HR_PERMISSIONS = EnumSet.allOf(PermissionCode.class);
 
     private final CompanyRepository companyRepository;
     private final RoleRepository roleRepository;

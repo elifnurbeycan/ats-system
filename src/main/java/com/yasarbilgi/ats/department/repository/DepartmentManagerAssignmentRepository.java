@@ -49,6 +49,13 @@ public interface DepartmentManagerAssignmentRepository
             Long departmentId
     );
 
+    @EntityGraph(attributePaths = {"user"})
+    List<DepartmentManagerAssignment>
+    findAllByCompanyIdAndDepartmentIdAndActiveTrueAndEndedAtIsNullOrderByStartedAtDesc(
+            Long companyId,
+            Long departmentId
+    );
+
     // Departmanın geçmiş dahil tüm yönetici atamalarını kullanıcı ayrıntılarıyla getirir.
     @EntityGraph(attributePaths = {"department", "user"})
     List<DepartmentManagerAssignment>

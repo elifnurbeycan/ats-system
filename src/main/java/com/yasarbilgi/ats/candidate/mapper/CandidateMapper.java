@@ -20,9 +20,12 @@ public interface CandidateMapper {
     // Aday sürecini maaş bilgisi içermeyen özet yanıta dönüştürür.
     @Mapping(target = "positionId", source = "position.id")
     @Mapping(target = "positionTitle", source = "position.title")
+    @Mapping(target = "departmentId", source = "position.department.id")
+    @Mapping(target = "departmentName", source = "position.department.name")
     @Mapping(target = "pipelineId", source = "pipeline.id")
     @Mapping(target = "pipelineName", source = "pipeline.name")
     @Mapping(target = "currentStageId", source = "currentStage.id")
     @Mapping(target = "currentStageName", source = "currentStage.name")
+    @Mapping(target = "currentStageType", source = "currentStage.stageType")
     CandidateProcessSummaryResponseDto toProcessSummaryResponseDto(CandidateProcess process);
 }

@@ -9,5 +9,6 @@ public enum PermissionCategory {
     CANDIDATE_PROCESS,
     COMPENSATION,
     INTERVIEW,
-    PIPELINE
+    PIPELINE,
+    AUDIT
 }

@@ -34,5 +34,7 @@ public enum PermissionCode {
     INTERVIEW_EVALUATE,
 
     PIPELINE_VIEW,
-    PIPELINE_MANAGE
+    PIPELINE_MANAGE,
+
+    AUDIT_VIEW
 }
