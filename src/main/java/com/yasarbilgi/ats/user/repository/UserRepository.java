@@ -36,6 +36,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
             Pageable pageable
     );
 
+    // Departmanın aktif kullanıcılarını rol bilgileriyle birlikte bildirim alıcıları için getirir.
+    @EntityGraph(attributePaths = {"roles"})
+    List<User> findAllByCompanyIdAndDepartmentIdAndActiveTrue(
+            Long companyId,
+            Long departmentId
+    );
+
     // Şirkete ait kullanıcıları departman ve rolleriyle birlikte getirir.
     @EntityGraph(attributePaths = {"department", "roles"})
     List<User> findAllByCompanyIdOrderByFirstNameAscLastNameAsc(Long companyId);

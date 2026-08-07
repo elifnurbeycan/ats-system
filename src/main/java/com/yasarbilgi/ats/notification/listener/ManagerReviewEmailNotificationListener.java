@@ -1,8 +1,8 @@
 package com.yasarbilgi.ats.notification.listener;
 
-import com.yasarbilgi.ats.department.repository.DepartmentManagerAssignmentRepository;
 import com.yasarbilgi.ats.notification.event.ManagerReviewEnteredEvent;
 import com.yasarbilgi.ats.user.entity.UserStatus;
+import com.yasarbilgi.ats.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,7 +19,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class ManagerReviewEmailNotificationListener {
 
-    private final DepartmentManagerAssignmentRepository assignmentRepository;
+    private static final String DEPARTMENT_MANAGER_ROLE = "DEPARTMENT_MANAGER";
+
+    private final UserRepository userRepository;
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
 
     @Value("${notifications.manager-review.enabled:false}")
@@ -47,19 +49,20 @@ public class ManagerReviewEmailNotificationListener {
             return;
         }
 
-        var recipients = assignmentRepository
-                .findAllByCompanyIdAndDepartmentIdAndActiveTrueAndEndedAtIsNullOrderByStartedAtDesc(
+        var recipients = userRepository
+                .findAllByCompanyIdAndDepartmentIdAndActiveTrue(
                         event.companyId(), event.departmentId())
                 .stream()
-                .map(assignment -> assignment.getUser())
                 .filter(user -> user.isActive() && user.getStatus() == UserStatus.ACTIVE)
+                .filter(user -> user.getRoles().stream()
+                        .anyMatch(role -> DEPARTMENT_MANAGER_ROLE.equals(role.getCode())))
                 .map(user -> user.getEmail())
                 .filter(email -> email != null && !email.isBlank())
                 .distinct()
                 .toList();
 
         if (recipients.isEmpty()) {
-            log.warn("Manager review notification skipped: no active department manager. departmentId={}, processId={}",
+            log.warn("Manager review notification skipped: no active department manager user in department. departmentId={}, processId={}",
                     event.departmentId(), event.candidateProcessId());
             return;
         }
