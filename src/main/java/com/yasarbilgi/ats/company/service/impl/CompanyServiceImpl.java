@@ -48,23 +48,16 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     @Transactional
     public CreatedCompanyResponseDto create(CreateCompanyRequestDto request) {
-        String code = request.code().trim().toUpperCase(Locale.ROOT);
+        String code = request.code().trim().toLowerCase(Locale.ROOT);
         String adminEmail = normalizeEmail(request.companyAdmin().email());
-        String hrEmail = normalizeEmail(request.hrUser().email());
         if (companyRepository.existsByCode(code)) {
             throw new BusinessRuleException("Şirket kodu daha önce kullanılmış.");
         }
-        if (adminEmail.equals(hrEmail)) {
-            throw new BusinessRuleException("Company Admin ve İK kullanıcılarının e-postaları farklı olmalıdır.");
-        }
-
         Company company = companyRepository.save(Company.builder()
                 .name(request.name().trim()).code(code).status(CompanyStatus.ACTIVE).build());
         Map<String, Role> roles = createDefaultRoles(company);
         User admin = createInitialUser(company, request.companyAdmin(), adminEmail, roles.get("COMPANY_ADMIN"));
-        User hr = createInitialUser(company, request.hrUser(), hrEmail, roles.get("HR"));
-        return new CreatedCompanyResponseDto(toResponse(company), toInitialUser(admin, "COMPANY_ADMIN"),
-                toInitialUser(hr, "HR"));
+        return new CreatedCompanyResponseDto(toResponse(company), toInitialUser(admin, "COMPANY_ADMIN"));
     }
 
     // Tüm şirketleri yönetim ekranında gösterilmek üzere getirir.
@@ -108,7 +101,8 @@ public class CompanyServiceImpl implements CompanyService {
             throw new BusinessRuleException("Sistem permission kayıtları eksik olduğu için şirket oluşturulamadı.");
         }
         List<RoleDefinition> definitions = List.of(
-                new RoleDefinition("COMPANY_ADMIN", "Şirket Yöneticisi", DataScope.COMPANY, READ_PERMISSIONS),
+                new RoleDefinition("COMPANY_ADMIN", "Şirket Yöneticisi", DataScope.COMPANY,
+                        EnumSet.allOf(PermissionCode.class)),
                 new RoleDefinition("HR", "İnsan Kaynakları", DataScope.COMPANY, HR_PERMISSIONS),
                 new RoleDefinition("GENERAL_MANAGER", "Genel Müdür", DataScope.COMPANY, READ_PERMISSIONS),
                 new RoleDefinition("DEPARTMENT_MANAGER", "Departman Yöneticisi", DataScope.DEPARTMENT, READ_PERMISSIONS),

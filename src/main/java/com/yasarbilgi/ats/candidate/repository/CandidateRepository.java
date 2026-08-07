@@ -9,11 +9,25 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 import java.util.Set;
+import java.time.Instant;
 
 public interface CandidateRepository extends JpaRepository<Candidate, Long> {
 
     // Şirketteki aktif adayların toplam sayısını getirir.
     long countByCompanyIdAndActiveTrue(Long companyId);
+
+    long countByCompanyIdAndActiveTrueAndCreatedAtGreaterThanEqual(Long companyId, Instant periodStart);
+
+    @Query("""
+            SELECT COUNT(DISTINCT candidate.id) FROM Candidate candidate
+            JOIN CandidateProcess process ON process.candidate = candidate
+            WHERE candidate.company.id = :companyId AND candidate.active = true
+              AND candidate.createdAt >= :periodStart AND process.active = true
+              AND process.position.department.id IN :departmentIds
+            """)
+    long countNewCandidatesByDepartmentIds(@Param("companyId") Long companyId,
+                                            @Param("departmentIds") Set<Long> departmentIds,
+                                            @Param("periodStart") Instant periodStart);
 
     // İzin verilen departmanlarda aktif süreci bulunan benzersiz adayların sayısını getirir.
     @Query("""
@@ -52,11 +66,11 @@ public interface CandidateRepository extends JpaRepository<Candidate, Long> {
             WHERE candidate.company.id = :companyId
               AND candidate.active = true
               AND (
-                    :search IS NULL
+                    CAST(:search AS string) IS NULL
                     OR LOWER(CONCAT(candidate.firstName, ' ', candidate.lastName))
-                        LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(candidate.email) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(candidate.linkedinUrl) LIKE LOWER(CONCAT('%', :search, '%'))
+                        LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+                    OR LOWER(candidate.email) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+                    OR LOWER(candidate.linkedinUrl) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
               )
             """)
     Page<Candidate> searchActiveCandidates(
@@ -75,11 +89,11 @@ public interface CandidateRepository extends JpaRepository<Candidate, Long> {
               AND process.active = true
               AND process.position.department.id IN :departmentIds
               AND (
-                    :search IS NULL
+                    CAST(:search AS string) IS NULL
                     OR LOWER(CONCAT(candidate.firstName, ' ', candidate.lastName))
-                        LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(candidate.email) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(candidate.linkedinUrl) LIKE LOWER(CONCAT('%', :search, '%'))
+                        LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+                    OR LOWER(candidate.email) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+                    OR LOWER(candidate.linkedinUrl) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
               )
             """)
     Page<Candidate> searchActiveCandidatesByDepartmentIds(

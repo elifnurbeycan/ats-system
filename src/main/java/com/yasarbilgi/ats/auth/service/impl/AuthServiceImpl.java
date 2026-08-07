@@ -28,6 +28,7 @@ import java.util.*;
 @Service @RequiredArgsConstructor @Transactional(readOnly = true)
 public class AuthServiceImpl implements AuthService {
     private static final String TOKEN_TYPE = "Bearer";
+    private static final String DEPARTMENT_MANAGER_ROLE_CODE = "DEPARTMENT_MANAGER";
     private final UserRepository userRepository;
     private final DepartmentManagerAssignmentRepository managerAssignmentRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -40,7 +41,7 @@ public class AuthServiceImpl implements AuthService {
     @Override @Transactional
     public TokenResponseDto login(LoginRequestDto request) {
         User user = userRepository.findByCompanyCodeIgnoreCaseAndEmailIgnoreCase(
-                        request.companyCode().trim(), request.email().trim())
+                        request.companyCode().trim().toLowerCase(Locale.ROOT), request.email().trim())
                 .orElseThrow(this::invalidCredentials);
         validateLoginUser(user);
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) throw invalidCredentials();
@@ -87,16 +88,24 @@ public class AuthServiceImpl implements AuthService {
                 .filter(Permission::isActive)
                 .map(permission -> permission.getCode().name())
                 .collect(java.util.stream.Collectors.toSet());
-        Set<Long> managedDepartmentIds = managerAssignmentRepository
+        Set<Long> managedDepartmentIds = new HashSet<>(managerAssignmentRepository
                 .findAllByCompanyIdAndUserIdAndActiveTrue(user.getCompany().getId(), user.getId())
                 .stream().map(assignment -> assignment.getDepartment().getId())
-                .collect(java.util.stream.Collectors.toSet());
-        JwtClaimsSet claims = JwtClaimsSet.builder().issuer(jwtProperties.issuer())
+                .collect(java.util.stream.Collectors.toSet()));
+        // Kullanıcı yönetim ekranında seçilen ana departman, departman yöneticisinin
+        // doğal veri kapsamıdır. Ayrı yönetici atamaları varsa bunlarla birleştirilir.
+        if (roles.contains(DEPARTMENT_MANAGER_ROLE_CODE) && user.getDepartment() != null) {
+            managedDepartmentIds.add(user.getDepartment().getId());
+        }
+        JwtClaimsSet.Builder claimsBuilder = JwtClaimsSet.builder().issuer(jwtProperties.issuer())
                 .issuedAt(now).expiresAt(accessExpiry).subject(user.getId().toString())
                 .claim("userId", user.getId()).claim("companyId", user.getCompany().getId())
-                .claim("departmentId", user.getDepartment() == null ? null : user.getDepartment().getId())
                 .claim("managedDepartmentIds", managedDepartmentIds)
-                .claim("roles", roles).claim("permissions", permissions).build();
+                .claim("roles", roles).claim("permissions", permissions);
+        if (user.getDepartment() != null) {
+            claimsBuilder.claim("departmentId", user.getDepartment().getId());
+        }
+        JwtClaimsSet claims = claimsBuilder.build();
         String accessToken = jwtEncoder.encode(JwtEncoderParameters.from(
                 JwsHeader.with(MacAlgorithm.HS256).build(), claims)).getTokenValue();
         String rawRefreshToken = generateOpaqueToken();

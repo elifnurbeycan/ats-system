@@ -40,11 +40,19 @@ public class DataScopeService {
     // Departman kapsamındaki kullanıcının yönetebildiği departman kimliklerini getirir.
     public Set<Long> getManagedDepartmentIds() {
         if (hasCompanyScope()) return Set.of();
-        Object claim = jwt().getToken().getClaim("managedDepartmentIds");
-        if (!(claim instanceof Collection<?> values)) return Set.of();
         Set<Long> ids = new HashSet<>();
-        values.stream().filter(Number.class::isInstance).map(Number.class::cast)
-                .map(Number::longValue).forEach(ids::add);
+        Object claim = jwt().getToken().getClaim("managedDepartmentIds");
+        if (claim instanceof Collection<?> values) {
+            values.stream().filter(Number.class::isInstance).map(Number.class::cast)
+                    .map(Number::longValue).forEach(ids::add);
+        }
+        // Departman yöneticisinin kullanıcı profilindeki ana departmanı her zaman
+        // veri kapsamına dahildir. Bu, ayrı yönetici ataması olmayan hesapların
+        // kendi departmanındaki pozisyon ve adayları görebilmesini sağlar.
+        if (hasDepartmentScope()) {
+            Number departmentId = jwt().getToken().getClaim("departmentId");
+            if (departmentId != null) ids.add(departmentId.longValue());
+        }
         return ids;
     }
 

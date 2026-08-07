@@ -19,6 +19,7 @@ import com.yasarbilgi.ats.user.repository.UserRepository;
 import com.yasarbilgi.ats.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
@@ -38,6 +39,7 @@ public class UserServiceImpl implements UserService {
     private final DepartmentRepository departmentRepository;
     private final RoleRepository roleRepository;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     // Kullanıcıyı davet durumunda, seçilen departman ve rollerle oluşturur.
     @Override
@@ -55,8 +57,9 @@ public class UserServiceImpl implements UserService {
                 .firstName(request.firstName().trim())
                 .lastName(request.lastName().trim())
                 .email(normalizedEmail)
+                .passwordHash(passwordEncoder.encode(request.temporaryPassword()))
                 .department(department)
-                .status(UserStatus.INVITED)
+                .status(UserStatus.ACTIVE)
                 .roles(roles)
                 .build();
 

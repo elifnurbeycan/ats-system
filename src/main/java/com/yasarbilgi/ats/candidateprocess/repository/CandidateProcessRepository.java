@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import java.util.Optional;
 import java.util.List;
 import java.util.Set;
+import java.time.Instant;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,6 +19,11 @@ public interface CandidateProcessRepository
 
     // Şirkette henüz tamamlanmamış aktif aday süreçlerinin sayısını getirir.
     long countByCompanyIdAndActiveTrueAndCompletedAtIsNull(Long companyId);
+
+    long countByCompanyIdAndActiveTrueAndCreatedAtGreaterThanEqual(Long companyId, Instant periodStart);
+
+    long countByCompanyIdAndPositionDepartmentIdInAndActiveTrueAndCreatedAtGreaterThanEqual(
+            Long companyId, Set<Long> departmentIds, Instant periodStart);
 
     // İzin verilen departmanlardaki tamamlanmamış aktif süreçleri sayar.
     long countByCompanyIdAndPositionDepartmentIdInAndActiveTrueAndCompletedAtIsNull(

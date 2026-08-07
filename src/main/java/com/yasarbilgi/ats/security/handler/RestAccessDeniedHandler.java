@@ -23,4 +23,5 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
         errorWriter.write(response, HttpStatus.FORBIDDEN.value(),
                 "Bu işlem için yetkiniz bulunmuyor.");
     }
+
 }

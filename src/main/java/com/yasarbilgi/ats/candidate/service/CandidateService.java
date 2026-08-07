@@ -24,4 +24,7 @@ public interface CandidateService {
             Long candidateId,
             UpdateCandidateRequestDto request
     );
+
+    // Adayı pasifleştirir (silme işlemi yerine yumuşak silme).
+    void deactivate(Long companyId, Long candidateId);
 }

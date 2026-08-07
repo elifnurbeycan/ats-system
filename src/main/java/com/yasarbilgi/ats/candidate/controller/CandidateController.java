@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,6 +38,8 @@ public class CandidateController {
         ));
     }
 
+
+
     // Aday profilini bağlı işe alım süreçleriyle birlikte getirir.
     @GetMapping("/{candidateId}")
     public ResponseEntity<ApiResponse<CandidateDetailResponseDto>> getById(
@@ -60,4 +63,15 @@ public class CandidateController {
                 candidateService.update(companyId, candidateId, request)
         ));
     }
+
+    // Adayı pasifleştirir (yumuşak silme).
+    @PatchMapping("/{candidateId}/deactivate")
+    public ResponseEntity<ApiResponse<Void>> deactivate(
+            @PathVariable Long companyId,
+            @PathVariable Long candidateId
+    ) {
+        candidateService.deactivate(companyId, candidateId);
+        return ResponseEntity.ok(ApiResponse.success("Aday pasifleştirildi.", null));
+    }
 }
+

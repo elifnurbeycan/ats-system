@@ -199,4 +199,14 @@ public class CandidateServiceImpl implements CandidateService {
                 ? null
                 : normalizedEmail.toLowerCase(Locale.ROOT);
     }
+
+    // Adayı pasifleştirir (yumuşak silme).
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void deactivate(Long companyId, Long candidateId) {
+        Candidate candidate = getCandidate(companyId, candidateId);
+        requireCandidateAccess(companyId, candidateId);
+        candidate.deactivate();
+    }
 }
+

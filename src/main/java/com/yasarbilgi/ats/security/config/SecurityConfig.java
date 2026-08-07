@@ -125,7 +125,7 @@ public class SecurityConfig {
                                 "/api/v1/companies/*/candidate-processes/*/stage")
                         .hasAuthority("CANDIDATE_STAGE_CHANGE")
 
-                        .requestMatchers(HttpMethod.GET, "/api/v1/companies/*/candidates/**")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/companies/*/candidates", "/api/v1/companies/*/candidates/**")
                         .hasAuthority("CANDIDATE_VIEW")
                         .requestMatchers(HttpMethod.POST, "/api/v1/companies/*/candidates")
                         .hasAuthority("CANDIDATE_CREATE")
