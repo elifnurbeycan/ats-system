@@ -24,6 +24,18 @@ spring:
       repositories:
         enabled: false
 
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${MAIL_STARTTLS_ENABLED:true}
+
 server:
   port: ${SERVER_PORT:8080}
   servlet:
@@ -57,3 +69,9 @@ security:
     issuer: ${JWT_ISSUER:ats-system}
     access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:15}
     refresh-token-days: ${JWT_REFRESH_TOKEN_DAYS:30}
+
+notifications:
+  manager-review:
+    enabled: ${MANAGER_REVIEW_MAIL_ENABLED:false}
+    from: ${MAIL_FROM:no-reply@ats.local}
+    frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:3000}

@@ -25,7 +25,9 @@ public interface CandidateProcessMapper {
                 process.getPosition().getId(),
                 process.getPipeline().getId(),
                 process.getCurrentStage().getId(),
-                process.getCurrentStage().getName()
+                process.getCurrentStage().getName(),
+                process.getCreatedAt(),
+                process.getUpdatedAt()
         );
     }
 
@@ -59,7 +61,9 @@ public interface CandidateProcessMapper {
                 process.getCurrentStage().getName(),
                 process.getCurrentStage().getStageType(),
                 process.getCompletedAt(),
-                process.isActive()
+                process.isActive(),
+                process.getCreatedAt(),
+                process.getUpdatedAt()
         );
     }
 

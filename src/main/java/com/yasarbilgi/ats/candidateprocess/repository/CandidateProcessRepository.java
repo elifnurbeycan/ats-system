@@ -32,13 +32,13 @@ public interface CandidateProcessRepository
     // Aktif aday süreçlerini mevcut pipeline aşamalarına göre gruplandırır.
     @Query("""
             SELECT stage.id AS stageId, stage.name AS stageName, stage.code AS stageCode,
-                   stage.displayOrder AS displayOrder, COUNT(process.id) AS candidateCount
+                   stage.displayOrder AS displayOrder, stage.stageType AS stageType,
+                   COUNT(process.id) AS candidateCount
             FROM CandidateProcess process
             JOIN process.currentStage stage
             WHERE process.company.id = :companyId
               AND process.active = true
-              AND process.completedAt IS NULL
-            GROUP BY stage.id, stage.name, stage.code, stage.displayOrder
+            GROUP BY stage.id, stage.name, stage.code, stage.displayOrder, stage.stageType
             ORDER BY stage.displayOrder
             """)
     List<StageCandidateCountProjection> countActiveProcessesByStage(@Param("companyId") Long companyId);
@@ -46,13 +46,71 @@ public interface CandidateProcessRepository
     // İzin verilen departmanlardaki aktif süreçleri mevcut aşamalarına göre gruplandırır.
     @Query("""
             SELECT stage.id AS stageId, stage.name AS stageName, stage.code AS stageCode,
-                   stage.displayOrder AS displayOrder, COUNT(process.id) AS candidateCount
+                   stage.displayOrder AS displayOrder, stage.stageType AS stageType,
+                   COUNT(process.id) AS candidateCount
             FROM CandidateProcess process JOIN process.currentStage stage
             WHERE process.company.id = :companyId AND process.active = true
-              AND process.completedAt IS NULL AND process.position.department.id IN :departmentIds
-            GROUP BY stage.id, stage.name, stage.code, stage.displayOrder ORDER BY stage.displayOrder
+              AND process.position.department.id IN :departmentIds
+            GROUP BY stage.id, stage.name, stage.code, stage.displayOrder, stage.stageType ORDER BY stage.displayOrder
             """)
     List<StageCandidateCountProjection> countActiveProcessesByStageAndDepartmentIds(
+            @Param("companyId") Long companyId, @Param("departmentIds") Set<Long> departmentIds);
+
+    @Query(value = """
+            SELECT date_trunc('month', process.created_at) AS monthStart,
+                   COUNT(process.id) AS applicationCount
+            FROM candidate_processes process
+            WHERE process.company_id = :companyId
+              AND process.active = true
+              AND process.created_at >= :periodStart
+            GROUP BY date_trunc('month', process.created_at)
+            ORDER BY date_trunc('month', process.created_at)
+            """, nativeQuery = true)
+    List<MonthlyApplicationCountProjection> countApplicationsByMonth(
+            @Param("companyId") Long companyId, @Param("periodStart") Instant periodStart);
+
+    @Query(value = """
+            SELECT date_trunc('month', process.created_at) AS monthStart,
+                   COUNT(process.id) AS applicationCount
+            FROM candidate_processes process
+            JOIN positions position ON position.id = process.position_id
+            WHERE process.company_id = :companyId
+              AND process.active = true
+              AND process.created_at >= :periodStart
+              AND position.department_id IN (:departmentIds)
+            GROUP BY date_trunc('month', process.created_at)
+            ORDER BY date_trunc('month', process.created_at)
+            """, nativeQuery = true)
+    List<MonthlyApplicationCountProjection> countApplicationsByMonthAndDepartmentIds(
+            @Param("companyId") Long companyId,
+            @Param("departmentIds") Set<Long> departmentIds,
+            @Param("periodStart") Instant periodStart);
+
+    @Query("""
+            SELECT department.id AS departmentId, department.name AS departmentName,
+                   COUNT(process.id) AS applicationCount
+            FROM CandidateProcess process
+            JOIN process.position position
+            JOIN position.department department
+            WHERE process.company.id = :companyId AND process.active = true
+            GROUP BY department.id, department.name
+            ORDER BY COUNT(process.id) DESC, department.name ASC
+            """)
+    List<DepartmentApplicationCountProjection> countApplicationsByDepartment(
+            @Param("companyId") Long companyId);
+
+    @Query("""
+            SELECT department.id AS departmentId, department.name AS departmentName,
+                   COUNT(process.id) AS applicationCount
+            FROM CandidateProcess process
+            JOIN process.position position
+            JOIN position.department department
+            WHERE process.company.id = :companyId AND process.active = true
+              AND department.id IN :departmentIds
+            GROUP BY department.id, department.name
+            ORDER BY COUNT(process.id) DESC, department.name ASC
+            """)
+    List<DepartmentApplicationCountProjection> countApplicationsByDepartmentIds(
             @Param("companyId") Long companyId, @Param("departmentIds") Set<Long> departmentIds);
 
     interface StageCandidateCountProjection {
@@ -60,7 +118,19 @@ public interface CandidateProcessRepository
         String getStageName();
         String getStageCode();
         Integer getDisplayOrder();
+        com.yasarbilgi.ats.pipeline.entity.PipelineStageType getStageType();
         Long getCandidateCount();
+    }
+
+    interface MonthlyApplicationCountProjection {
+        Instant getMonthStart();
+        Long getApplicationCount();
+    }
+
+    interface DepartmentApplicationCountProjection {
+        Long getDepartmentId();
+        String getDepartmentName();
+        Long getApplicationCount();
     }
 
     Optional<CandidateProcess> findByCompanyIdAndId(
@@ -120,7 +190,7 @@ public interface CandidateProcessRepository
     );
 
     // Adayın aktif süreçlerini pozisyon, pipeline ve aşama bilgileriyle getirir.
-    @EntityGraph(attributePaths = {"position", "pipeline", "currentStage"})
+    @EntityGraph(attributePaths = {"position", "position.department", "pipeline", "currentStage"})
     List<CandidateProcess> findAllByCompanyIdAndCandidateIdAndActiveTrueOrderByCreatedAtDesc(
             Long companyId,
             Long candidateId

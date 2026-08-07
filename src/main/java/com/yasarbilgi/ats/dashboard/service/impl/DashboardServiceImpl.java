@@ -21,7 +21,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -63,11 +68,14 @@ public class DashboardServiceImpl implements DashboardService {
         var stageDistribution = candidateProcessRepository.countActiveProcessesByStage(companyId).stream()
                 .map(stage -> new DashboardResponseDto.StageDistribution(
                         stage.getStageId(), stage.getStageName(), stage.getStageCode(),
-                        stage.getDisplayOrder(), stage.getCandidateCount()))
+                        stage.getDisplayOrder(), stage.getStageType(), stage.getCandidateCount()))
                 .toList();
         return new DashboardResponseDto(now, summary, stageDistribution,
                 getPeriodAnalytics(companyId, now.minus(7, ChronoUnit.DAYS), null),
-                getPeriodAnalytics(companyId, now.minus(30, ChronoUnit.DAYS), null));
+                getPeriodAnalytics(companyId, now.minus(30, ChronoUnit.DAYS), null),
+                getPeriodAnalytics(companyId, Instant.EPOCH, null),
+                getMonthlyApplicationTrend(companyId, now, null),
+                getDepartmentDistribution(companyId, null));
     }
 
     // Dashboard metriklerini yalnızca kullanıcının yönettiği departmanlardan oluşturur.
@@ -94,10 +102,49 @@ public class DashboardServiceImpl implements DashboardService {
         var stages = candidateProcessRepository
                 .countActiveProcessesByStageAndDepartmentIds(companyId, departmentIds).stream()
                 .map(stage -> new DashboardResponseDto.StageDistribution(stage.getStageId(), stage.getStageName(),
-                        stage.getStageCode(), stage.getDisplayOrder(), stage.getCandidateCount())).toList();
+                        stage.getStageCode(), stage.getDisplayOrder(), stage.getStageType(), stage.getCandidateCount())).toList();
         return new DashboardResponseDto(now, summary, stages,
                 getPeriodAnalytics(companyId, now.minus(7, ChronoUnit.DAYS), departmentIds),
-                getPeriodAnalytics(companyId, now.minus(30, ChronoUnit.DAYS), departmentIds));
+                getPeriodAnalytics(companyId, now.minus(30, ChronoUnit.DAYS), departmentIds),
+                getPeriodAnalytics(companyId, Instant.EPOCH, departmentIds),
+                getMonthlyApplicationTrend(companyId, now, departmentIds),
+                getDepartmentDistribution(companyId, departmentIds));
+    }
+
+    private List<DashboardResponseDto.MonthlyApplicationTrend> getMonthlyApplicationTrend(
+            Long companyId, Instant now, Set<Long> departmentIds) {
+        var currentMonth = now.atZone(ZoneOffset.UTC).withDayOfMonth(1).toLocalDate();
+        var firstMonth = currentMonth.minusMonths(11);
+        Instant periodStart = firstMonth.atStartOfDay(ZoneOffset.UTC).toInstant();
+        var counts = departmentIds == null
+                ? candidateProcessRepository.countApplicationsByMonth(companyId, periodStart)
+                : candidateProcessRepository.countApplicationsByMonthAndDepartmentIds(
+                        companyId, departmentIds, periodStart);
+
+        Map<String, Long> countByMonth = new HashMap<>();
+        counts.forEach(item -> countByMonth.put(
+                item.getMonthStart().atZone(ZoneOffset.UTC).toLocalDate().withDayOfMonth(1).toString(),
+                item.getApplicationCount()));
+
+        List<DashboardResponseDto.MonthlyApplicationTrend> result = new ArrayList<>();
+        for (int index = 0; index < 12; index++) {
+            var month = firstMonth.plusMonths(index);
+            result.add(new DashboardResponseDto.MonthlyApplicationTrend(
+                    month.atStartOfDay(ZoneOffset.UTC).toInstant(),
+                    countByMonth.getOrDefault(month.toString(), 0L)));
+        }
+        return result;
+    }
+
+    private List<DashboardResponseDto.DepartmentDistribution> getDepartmentDistribution(
+            Long companyId, Set<Long> departmentIds) {
+        var counts = departmentIds == null
+                ? candidateProcessRepository.countApplicationsByDepartment(companyId)
+                : candidateProcessRepository.countApplicationsByDepartmentIds(companyId, departmentIds);
+        return counts.stream()
+                .map(item -> new DashboardResponseDto.DepartmentDistribution(
+                        item.getDepartmentId(), item.getDepartmentName(), item.getApplicationCount()))
+                .toList();
     }
 
     private DashboardResponseDto.PeriodAnalytics getPeriodAnalytics(

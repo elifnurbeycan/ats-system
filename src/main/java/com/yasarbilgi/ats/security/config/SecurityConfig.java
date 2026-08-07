@@ -49,6 +49,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/me").authenticated()
                         .requestMatchers("/api/v1/auth/**", "/actuator/health").permitAll()
 
+                        .requestMatchers(HttpMethod.GET, "/api/v1/companies/*/audit-logs/**")
+                        .hasAuthority("AUDIT_VIEW")
+
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/companies/*/candidate-processes/*/compensation")
                         .hasAuthority("CANDIDATE_COMPENSATION_VIEW")
