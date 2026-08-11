@@ -7,6 +7,7 @@ import com.yasarbilgi.ats.company.dto.response.*;
 import com.yasarbilgi.ats.company.entity.*;
 import com.yasarbilgi.ats.company.repository.CompanyRepository;
 import com.yasarbilgi.ats.company.service.CompanyService;
+import com.yasarbilgi.ats.common.response.PageResponse;
 import com.yasarbilgi.ats.permission.entity.*;
 import com.yasarbilgi.ats.permission.repository.PermissionRepository;
 import com.yasarbilgi.ats.role.entity.*;
@@ -16,6 +17,8 @@ import com.yasarbilgi.ats.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
@@ -61,8 +64,11 @@ public class CompanyServiceImpl implements CompanyService {
 
     // Tüm şirketleri yönetim ekranında gösterilmek üzere getirir.
     @Override
-    public List<CompanyResponseDto> getAll() {
-        return companyRepository.findAllByOrderByNameAsc().stream().map(this::toResponse).toList();
+    public PageResponse<CompanyResponseDto> getAll(int page, int size) {
+        if (page < 0 || size < 1 || size > 100) throw new BusinessRuleException("Geçersiz sayfalama bilgisi.");
+        return PageResponse.from(
+                companyRepository.findAll(PageRequest.of(page, size, Sort.by("name").ascending())),
+                this::toResponse);
     }
 
     // Kimliği verilen şirketi getirir.

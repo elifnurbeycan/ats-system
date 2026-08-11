@@ -1,6 +1,7 @@
 package com.yasarbilgi.ats.department.controller;
 
 import com.yasarbilgi.ats.common.response.ApiResponse;
+import com.yasarbilgi.ats.common.response.PageResponse;
 import com.yasarbilgi.ats.department.dto.request.CreateDepartmentRequestDto;
 import com.yasarbilgi.ats.department.dto.request.UpdateDepartmentRequestDto;
 import com.yasarbilgi.ats.department.dto.response.DepartmentResponseDto;
@@ -43,12 +44,14 @@ public class DepartmentController {
 
     // Şirket departmanlarını aktiflik filtresine göre listeler.
     @GetMapping
-    public ResponseEntity<ApiResponse<List<DepartmentResponseDto>>> getAll(
+    public ResponseEntity<ApiResponse<PageResponse<DepartmentResponseDto>>> getAll(
             @PathVariable Long companyId,
-            @RequestParam(defaultValue = "false") boolean includeInactive
+            @RequestParam(defaultValue = "false") boolean includeInactive,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                departmentService.getAll(companyId, includeInactive)
+                departmentService.getAll(companyId, includeInactive, page, size)
         ));
     }
 

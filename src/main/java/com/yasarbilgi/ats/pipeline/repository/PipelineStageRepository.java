@@ -53,4 +53,7 @@ public interface PipelineStageRepository
     // Pipeline içindeki aktif ve pasif tüm aşamaları sıralı olarak getirir.
     List<PipelineStage> findAllByCompanyIdAndPipelineIdOrderByDisplayOrderAsc(
             Long companyId, Long pipelineId);
+
+    long countByCompanyIdAndPipelineIdAndStageTypeAndActiveTrue(
+            Long companyId, Long pipelineId, PipelineStageType stageType);
 }

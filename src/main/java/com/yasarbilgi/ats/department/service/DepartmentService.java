@@ -5,6 +5,7 @@ import com.yasarbilgi.ats.department.dto.request.UpdateDepartmentRequestDto;
 import com.yasarbilgi.ats.department.dto.response.DepartmentResponseDto;
 
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
 
 public interface DepartmentService {
 
@@ -12,7 +13,7 @@ public interface DepartmentService {
     DepartmentResponseDto create(Long companyId, CreateDepartmentRequestDto request);
 
     // Şirket departmanlarını aktiflik tercihine göre listeler.
-    List<DepartmentResponseDto> getAll(Long companyId, boolean includeInactive);
+    PageResponse<DepartmentResponseDto> getAll(Long companyId, boolean includeInactive, int page, int size);
 
     // Şirkete ait departmanın detayını getirir.
     DepartmentResponseDto getById(Long companyId, Long departmentId);

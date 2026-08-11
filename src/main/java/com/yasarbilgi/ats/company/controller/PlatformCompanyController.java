@@ -4,6 +4,7 @@ import com.yasarbilgi.ats.company.dto.request.*;
 import com.yasarbilgi.ats.company.dto.response.*;
 import com.yasarbilgi.ats.company.service.CompanyService;
 import com.yasarbilgi.ats.common.response.ApiResponse;
+import com.yasarbilgi.ats.common.response.PageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,8 +30,10 @@ public class PlatformCompanyController {
 
     // Platformdaki tüm şirketleri listeler.
     @GetMapping
-    public ResponseEntity<ApiResponse<List<CompanyResponseDto>>> getAll() {
-        return ResponseEntity.ok(ApiResponse.success(companyService.getAll()));
+    public ResponseEntity<ApiResponse<PageResponse<CompanyResponseDto>>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(companyService.getAll(page, size)));
     }
 
     // Kimliği verilen şirketi getirir.

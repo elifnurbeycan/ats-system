@@ -6,13 +6,14 @@ import com.yasarbilgi.ats.pipeline.dto.response.PipelineDetailResponseDto;
 import com.yasarbilgi.ats.pipeline.dto.request.*;
 
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
 
 public interface PipelineService {
 
     // Şirkete aşamalarıyla birlikte yeni pipeline ekler.
     PipelineDetailResponseDto create(Long companyId, CreatePipelineRequestDto request);
 
-    List<PipelineSummaryResponseDto> getPipelines(Long companyId);
+    PageResponse<PipelineSummaryResponseDto> getPipelines(Long companyId, int page, int size);
 
     List<PipelineStageResponseDto> getStages(Long companyId, Long pipelineId);
 

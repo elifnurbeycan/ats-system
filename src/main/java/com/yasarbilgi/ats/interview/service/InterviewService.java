@@ -15,5 +15,6 @@ public interface InterviewService {
     // Görüşmecinin değerlendirmesini oluşturur veya günceller.
     InterviewEvaluationResponseDto saveEvaluation(Long companyId, Long processId, Long interviewId, SaveInterviewEvaluationRequestDto request);
     // Görüşmenin değerlendirmelerini listeler.
-    List<InterviewEvaluationResponseDto> getEvaluations(Long companyId, Long processId, Long interviewId);
+    PageResponse<InterviewEvaluationResponseDto> getEvaluations(Long companyId, Long processId,
+                                                                 Long interviewId, int page, int size);
 }

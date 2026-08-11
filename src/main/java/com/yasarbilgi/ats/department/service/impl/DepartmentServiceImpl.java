@@ -11,8 +11,11 @@ import com.yasarbilgi.ats.department.entity.Department;
 import com.yasarbilgi.ats.department.mapper.DepartmentMapper;
 import com.yasarbilgi.ats.department.repository.DepartmentRepository;
 import com.yasarbilgi.ats.department.service.DepartmentService;
+import com.yasarbilgi.ats.common.response.PageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -52,16 +55,15 @@ public class DepartmentServiceImpl implements DepartmentService {
 
     // Departmanları yalnızca aktif veya tüm kayıtlar olacak şekilde listeler.
     @Override
-    public List<DepartmentResponseDto> getAll(Long companyId, boolean includeInactive) {
+    public PageResponse<DepartmentResponseDto> getAll(Long companyId, boolean includeInactive, int page, int size) {
         getCompany(companyId);
+        validatePageRequest(page, size);
 
-        List<Department> departments = includeInactive
-                ? departmentRepository.findAllByCompanyIdOrderByNameAsc(companyId)
-                : departmentRepository.findAllByCompanyIdAndActiveTrueOrderByNameAsc(companyId);
-
-        return departments.stream()
-                .map(departmentMapper::toResponseDto)
-                .toList();
+        PageRequest pageable = PageRequest.of(page, size, Sort.by("name").ascending());
+        var departments = includeInactive
+                ? departmentRepository.findAllByCompanyId(companyId, pageable)
+                : departmentRepository.findAllByCompanyIdAndActiveTrue(companyId, pageable);
+        return PageResponse.from(departments, departmentMapper::toResponseDto);
     }
 
     // Departmanı şirket sınırı içinde kimliğine göre getirir.
@@ -133,5 +135,9 @@ public class DepartmentServiceImpl implements DepartmentService {
         }
 
         return description.trim();
+    }
+
+    private void validatePageRequest(int page, int size) {
+        if (page < 0 || size < 1 || size > 100) throw new BusinessRuleException("Geçersiz sayfalama bilgisi.");
     }
 }

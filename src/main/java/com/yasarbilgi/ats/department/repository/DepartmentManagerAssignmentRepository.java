@@ -3,6 +3,8 @@ package com.yasarbilgi.ats.department.repository;
 import com.yasarbilgi.ats.department.entity.DepartmentManagerAssignment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -63,4 +65,12 @@ public interface DepartmentManagerAssignmentRepository
             Long companyId,
             Long departmentId
     );
+
+    @EntityGraph(attributePaths = {"department", "user"})
+    Page<DepartmentManagerAssignment> findAllByCompanyIdAndDepartmentId(
+            Long companyId, Long departmentId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"department", "user"})
+    Page<DepartmentManagerAssignment> findAllByCompanyIdAndDepartmentIdAndActiveTrue(
+            Long companyId, Long departmentId, Pageable pageable);
 }

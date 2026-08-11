@@ -1,6 +1,7 @@
 package com.yasarbilgi.ats.department.controller;
 
 import com.yasarbilgi.ats.common.response.ApiResponse;
+import com.yasarbilgi.ats.common.response.PageResponse;
 import com.yasarbilgi.ats.department.dto.request.AssignDepartmentManagerRequestDto;
 import com.yasarbilgi.ats.department.dto.response.DepartmentManagerAssignmentResponseDto;
 import com.yasarbilgi.ats.department.service.DepartmentManagerAssignmentService;
@@ -35,13 +36,15 @@ public class DepartmentManagerAssignmentController {
 
     // Departmanın yönetici atamalarını isteğe bağlı geçmiş bilgisiyle listeler.
     @GetMapping
-    public ResponseEntity<ApiResponse<List<DepartmentManagerAssignmentResponseDto>>> getAll(
+    public ResponseEntity<ApiResponse<PageResponse<DepartmentManagerAssignmentResponseDto>>> getAll(
             @PathVariable Long companyId,
             @PathVariable Long departmentId,
-            @RequestParam(defaultValue = "false") boolean includeHistory
+            @RequestParam(defaultValue = "false") boolean includeHistory,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                assignmentService.getAll(companyId, departmentId, includeHistory)
+                assignmentService.getAll(companyId, departmentId, includeHistory, page, size)
         ));
     }
 

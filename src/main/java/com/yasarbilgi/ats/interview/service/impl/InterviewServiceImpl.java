@@ -124,16 +124,21 @@ public class InterviewServiceImpl implements InterviewService {
 
     // Değerlendirmeleri görüşmeci için yalnızca kendi kaydıyla sınırlandırarak getirir.
     @Override
-    public List<InterviewEvaluationResponseDto> getEvaluations(Long companyId, Long processId, Long id) {
+    public PageResponse<InterviewEvaluationResponseDto> getEvaluations(Long companyId, Long processId, Long id,
+                                                                        int page, int size) {
         getInterview(companyId, processId, id);
+        validatePage(page, size);
+        List<InterviewEvaluationResponseDto> evaluations;
         if (dataScopeService.hasInterviewerScope()) {
-            return evaluationRepository
+            evaluations = evaluationRepository
                     .findAllByCompanyIdAndInterviewIdAndEvaluatorIdAndActiveTrueOrderByCreatedAtAsc(
                             companyId, id, dataScopeService.getCurrentUserId())
                     .stream().map(mapper::toEvaluationResponseDto).toList();
+        } else {
+            evaluations = evaluationRepository.findAllByCompanyIdAndInterviewIdAndActiveTrueOrderByCreatedAtAsc(
+                    companyId, id).stream().map(mapper::toEvaluationResponseDto).toList();
         }
-        return evaluationRepository.findAllByCompanyIdAndInterviewIdAndActiveTrueOrderByCreatedAtAsc(
-                        companyId, id).stream().map(mapper::toEvaluationResponseDto).toList();
+        return PageResponse.fromList(evaluations, page, size);
     }
 
     // Aday sürecini şirket sınırında aktif kayıtlardan getirir.

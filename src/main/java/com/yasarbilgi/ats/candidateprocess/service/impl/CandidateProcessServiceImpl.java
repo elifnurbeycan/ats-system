@@ -18,6 +18,7 @@ import com.yasarbilgi.ats.candidateprocess.repository.CandidateProcessRepository
 import com.yasarbilgi.ats.candidateprocess.repository.CandidateProcessStageHistoryRepository;
 import com.yasarbilgi.ats.candidateprocess.service.CandidateProcessService;
 import com.yasarbilgi.ats.common.exception.BusinessRuleException;
+import com.yasarbilgi.ats.common.contract.ApplicationContract;
 import com.yasarbilgi.ats.common.exception.ResourceNotFoundException;
 import com.yasarbilgi.ats.company.entity.Company;
 import com.yasarbilgi.ats.company.repository.CompanyRepository;
@@ -289,9 +290,14 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
         String linkedinUrl = normalizeNullable(request.linkedinUrl());
 
         if (linkedinUrl != null) {
-            return candidateRepository
+            Candidate candidate = candidateRepository
                     .findByCompanyIdAndLinkedinUrl(company.getId(), linkedinUrl)
                     .orElseGet(() -> saveCandidate(company, request, linkedinUrl));
+            if (!candidate.isActive()) {
+                candidate.activate();
+                candidate.updateIdentityInformation(request.firstName().trim(), request.lastName().trim(), linkedinUrl);
+            }
+            return candidate;
         }
 
         return saveCandidate(company, request, null);
@@ -340,7 +346,11 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
             );
         }
 
-        return request.salaryCurrency().trim().toUpperCase(Locale.ROOT);
+        String currency = request.salaryCurrency().trim().toUpperCase(Locale.ROOT);
+        if (!ApplicationContract.SALARY_CURRENCIES.contains(currency)) {
+            throw new BusinessRuleException("Desteklenmeyen para birimi: " + currency);
+        }
+        return currency;
     }
 
     // Aday sürecini şirket sınırı içerisinde getirir.

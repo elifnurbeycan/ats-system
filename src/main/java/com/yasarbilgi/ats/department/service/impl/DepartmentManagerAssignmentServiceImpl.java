@@ -10,10 +10,13 @@ import com.yasarbilgi.ats.department.mapper.DepartmentManagerAssignmentMapper;
 import com.yasarbilgi.ats.department.repository.DepartmentManagerAssignmentRepository;
 import com.yasarbilgi.ats.department.repository.DepartmentRepository;
 import com.yasarbilgi.ats.department.service.DepartmentManagerAssignmentService;
+import com.yasarbilgi.ats.common.response.PageResponse;
 import com.yasarbilgi.ats.user.entity.User;
 import com.yasarbilgi.ats.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -66,27 +69,21 @@ public class DepartmentManagerAssignmentServiceImpl
 
     // Departmanın aktif veya geçmiş dahil tüm yönetici atamalarını getirir.
     @Override
-    public List<DepartmentManagerAssignmentResponseDto> getAll(
+    public PageResponse<DepartmentManagerAssignmentResponseDto> getAll(
             Long companyId,
             Long departmentId,
-            boolean includeHistory
+            boolean includeHistory,
+            int page,
+            int size
     ) {
         getDepartment(companyId, departmentId);
+        if (page < 0 || size < 1 || size > 100) throw new BusinessRuleException("Geçersiz sayfalama bilgisi.");
 
-        List<DepartmentManagerAssignment> assignments = includeHistory
-                ? assignmentRepository.findAllByCompanyIdAndDepartmentIdOrderByStartedAtDesc(
-                        companyId,
-                        departmentId
-                )
-                : assignmentRepository
-                        .findAllByCompanyIdAndDepartmentIdAndActiveTrueOrderByStartedAtDesc(
-                                companyId,
-                                departmentId
-                        );
-
-        return assignments.stream()
-                .map(assignmentMapper::toResponseDto)
-                .toList();
+        PageRequest pageable = PageRequest.of(page, size, Sort.by("startedAt").descending());
+        var assignments = includeHistory
+                ? assignmentRepository.findAllByCompanyIdAndDepartmentId(companyId, departmentId, pageable)
+                : assignmentRepository.findAllByCompanyIdAndDepartmentIdAndActiveTrue(companyId, departmentId, pageable);
+        return PageResponse.from(assignments, assignmentMapper::toResponseDto);
     }
 
     // Aktif yönetici atamasını bitiş zamanı kaydederek sona erdirir.
