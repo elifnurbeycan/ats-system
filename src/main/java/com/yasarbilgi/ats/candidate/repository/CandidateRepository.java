@@ -102,4 +102,18 @@ public interface CandidateRepository extends JpaRepository<Candidate, Long> {
             @Param("search") String search,
             Pageable pageable
     );
+
+    @Query("""
+            SELECT candidate FROM Candidate candidate
+            WHERE candidate.company.id = :companyId
+              AND (:includeInactive = true OR candidate.active = true)
+              AND (CAST(:search AS string) IS NULL
+                   OR LOWER(CONCAT(candidate.firstName, ' ', candidate.lastName)) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+                   OR LOWER(candidate.email) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+                   OR LOWER(candidate.linkedinUrl) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
+            """)
+    Page<Candidate> searchCandidates(@Param("companyId") Long companyId,
+                                     @Param("search") String search,
+                                     @Param("includeInactive") boolean includeInactive,
+                                     Pageable pageable);
 }

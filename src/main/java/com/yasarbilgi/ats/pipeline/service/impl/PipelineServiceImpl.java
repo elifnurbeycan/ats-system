@@ -11,8 +11,11 @@ import com.yasarbilgi.ats.pipeline.entity.*;
 import com.yasarbilgi.ats.pipeline.mapper.PipelineMapper;
 import com.yasarbilgi.ats.pipeline.repository.*;
 import com.yasarbilgi.ats.pipeline.service.PipelineService;
+import com.yasarbilgi.ats.common.response.PageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
@@ -50,10 +53,13 @@ public class PipelineServiceImpl implements PipelineService {
 
     // Şirketin aktif pipeline'larını listeler.
     @Override
-    public List<PipelineSummaryResponseDto> getPipelines(Long companyId) {
+    public PageResponse<PipelineSummaryResponseDto> getPipelines(Long companyId, int page, int size) {
         getCompany(companyId);
-        return pipelineRepository.findAllByCompanyIdAndActiveTrueOrderByNameAsc(companyId).stream()
-                .map(pipelineMapper::toSummaryResponseDto).toList();
+        if (page < 0 || size < 1 || size > 100) throw new BusinessRuleException("Geçersiz sayfalama bilgisi.");
+        return PageResponse.from(
+                pipelineRepository.findAllByCompanyIdAndActiveTrue(
+                        companyId, PageRequest.of(page, size, Sort.by("name").ascending())),
+                pipelineMapper::toSummaryResponseDto);
     }
 
     // Pipeline'ın aktif aşamalarını sıralı olarak getirir.
@@ -157,6 +163,11 @@ public class PipelineServiceImpl implements PipelineService {
         PipelineStage stage = getStage(companyId, pipelineId, stageId);
         if (candidateProcessRepository.existsByCompanyIdAndCurrentStageIdAndActiveTrue(companyId, stageId)) {
             throw new BusinessRuleException("Aktif adayların bulunduğu aşama silinemez.");
+        }
+        if (stage.getStageType() == PipelineStageType.ACTIVE
+                && stageRepository.countByCompanyIdAndPipelineIdAndStageTypeAndActiveTrue(
+                companyId, pipelineId, PipelineStageType.ACTIVE) <= 1) {
+            throw new BusinessRuleException("Pipeline içinde en az bir aktif süreç aşaması kalmalıdır.");
         }
         stage.releaseUniqueValuesForReuse();
         stage.deactivate();

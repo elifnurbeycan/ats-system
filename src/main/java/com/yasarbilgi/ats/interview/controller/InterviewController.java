@@ -51,8 +51,9 @@ public class InterviewController {
                 service.saveEvaluation(companyId, candidateProcessId, interviewId, request)));
     }
     // Görüşmeye ait değerlendirmeleri listeler.
-    @GetMapping("/{interviewId}/evaluations") public ResponseEntity<ApiResponse<List<InterviewEvaluationResponseDto>>> getEvaluations(
-            @PathVariable Long companyId, @PathVariable Long candidateProcessId, @PathVariable Long interviewId) {
-        return ResponseEntity.ok(ApiResponse.success(service.getEvaluations(companyId, candidateProcessId, interviewId)));
+    @GetMapping("/{interviewId}/evaluations") public ResponseEntity<ApiResponse<PageResponse<InterviewEvaluationResponseDto>>> getEvaluations(
+            @PathVariable Long companyId, @PathVariable Long candidateProcessId, @PathVariable Long interviewId,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(service.getEvaluations(companyId, candidateProcessId, interviewId, page, size)));
     }
 }

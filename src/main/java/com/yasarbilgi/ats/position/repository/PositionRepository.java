@@ -4,6 +4,10 @@ import com.yasarbilgi.ats.position.entity.Position;
 import com.yasarbilgi.ats.position.entity.PositionStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -51,4 +55,30 @@ public interface PositionRepository extends JpaRepository<Position, Long> {
     // Şirkete ait aktif ve pasif tüm pozisyonları departman bilgisiyle birlikte getirir.
     @EntityGraph(attributePaths = "department")
     List<Position> findAllByCompanyIdOrderByTitleAsc(Long companyId);
+
+    @EntityGraph(attributePaths = "department")
+    @Query("""
+            SELECT position FROM Position position
+            WHERE position.company.id = :companyId AND position.active = true
+              AND (:departmentId IS NULL OR position.department.id = :departmentId)
+              AND (:status IS NULL OR position.status = :status)
+            """)
+    Page<Position> search(@Param("companyId") Long companyId,
+                          @Param("departmentId") Long departmentId,
+                          @Param("status") PositionStatus status,
+                          Pageable pageable);
+
+    @EntityGraph(attributePaths = "department")
+    @Query("""
+            SELECT position FROM Position position
+            WHERE position.company.id = :companyId AND position.active = true
+              AND position.department.id IN :departmentIds
+              AND (:departmentId IS NULL OR position.department.id = :departmentId)
+              AND (:status IS NULL OR position.status = :status)
+            """)
+    Page<Position> searchByDepartmentScope(@Param("companyId") Long companyId,
+                                           @Param("departmentIds") Set<Long> departmentIds,
+                                           @Param("departmentId") Long departmentId,
+                                           @Param("status") PositionStatus status,
+                                           Pageable pageable);
 }

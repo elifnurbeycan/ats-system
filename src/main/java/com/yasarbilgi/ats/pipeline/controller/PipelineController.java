@@ -1,6 +1,7 @@
 package com.yasarbilgi.ats.pipeline.controller;
 
 import com.yasarbilgi.ats.common.response.ApiResponse;
+import com.yasarbilgi.ats.common.response.PageResponse;
 import com.yasarbilgi.ats.pipeline.dto.response.PipelineStageResponseDto;
 import com.yasarbilgi.ats.pipeline.dto.response.PipelineSummaryResponseDto;
 import com.yasarbilgi.ats.pipeline.dto.response.PipelineDetailResponseDto;
@@ -30,10 +31,12 @@ public class PipelineController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<PipelineSummaryResponseDto>>> getPipelines(
-            @PathVariable Long companyId
+    public ResponseEntity<ApiResponse<PageResponse<PipelineSummaryResponseDto>>> getPipelines(
+            @PathVariable Long companyId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(ApiResponse.success(pipelineService.getPipelines(companyId)));
+        return ResponseEntity.ok(ApiResponse.success(pipelineService.getPipelines(companyId, page, size)));
     }
 
     // Pipeline ayrıntısını aşamalarıyla birlikte getirir.

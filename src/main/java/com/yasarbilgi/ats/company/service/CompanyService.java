@@ -7,6 +7,7 @@ import com.yasarbilgi.ats.company.dto.response.CompanyResponseDto;
 import com.yasarbilgi.ats.company.dto.response.CreatedCompanyResponseDto;
 
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
 
 public interface CompanyService {
 
@@ -14,7 +15,7 @@ public interface CompanyService {
     CreatedCompanyResponseDto create(CreateCompanyRequestDto request);
 
     // Sistemdeki tüm şirketleri adlarına göre sıralayarak getirir.
-    List<CompanyResponseDto> getAll();
+    PageResponse<CompanyResponseDto> getAll(int page, int size);
 
     // Belirtilen şirketin temel bilgilerini getirir.
     CompanyResponseDto getById(Long companyId);

@@ -4,6 +4,7 @@ import com.yasarbilgi.ats.department.dto.request.AssignDepartmentManagerRequestD
 import com.yasarbilgi.ats.department.dto.response.DepartmentManagerAssignmentResponseDto;
 
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
 
 public interface DepartmentManagerAssignmentService {
 
@@ -15,10 +16,12 @@ public interface DepartmentManagerAssignmentService {
     );
 
     // Departmanın yönetici atamalarını geçmiş tercihiyle listeler.
-    List<DepartmentManagerAssignmentResponseDto> getAll(
+    PageResponse<DepartmentManagerAssignmentResponseDto> getAll(
             Long companyId,
             Long departmentId,
-            boolean includeHistory
+            boolean includeHistory,
+            int page,
+            int size
     );
 
     // Aktif departman yöneticisi atamasını tarihçeyi koruyarak sona erdirir.

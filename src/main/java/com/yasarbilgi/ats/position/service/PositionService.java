@@ -8,6 +8,7 @@ import com.yasarbilgi.ats.position.dto.response.PositionSummaryResponseDto;
 import com.yasarbilgi.ats.position.entity.PositionStatus;
 
 import java.util.List;
+import com.yasarbilgi.ats.common.response.PageResponse;
 
 public interface PositionService {
 
@@ -15,10 +16,12 @@ public interface PositionService {
     PositionResponseDto create(Long companyId, CreatePositionRequestDto request);
 
     // Şirket pozisyonlarını departman ve durum filtreleriyle listeler.
-    List<PositionResponseDto> getAll(
+    PageResponse<PositionResponseDto> getAll(
             Long companyId,
             Long departmentId,
-            PositionStatus status
+            PositionStatus status,
+            int page,
+            int size
     );
 
     // Şirkete ait pozisyon detayını getirir.

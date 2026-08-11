@@ -1,6 +1,7 @@
 package com.yasarbilgi.ats.position.controller;
 
 import com.yasarbilgi.ats.common.response.ApiResponse;
+import com.yasarbilgi.ats.common.response.PageResponse;
 import com.yasarbilgi.ats.position.dto.request.ChangePositionStatusRequestDto;
 import com.yasarbilgi.ats.position.dto.request.CreatePositionRequestDto;
 import com.yasarbilgi.ats.position.dto.request.UpdatePositionRequestDto;
@@ -46,13 +47,15 @@ public class PositionController {
 
     // Pozisyonları isteğe bağlı departman ve durum filtresiyle listeler.
     @GetMapping
-    public ResponseEntity<ApiResponse<List<PositionResponseDto>>> getAll(
+    public ResponseEntity<ApiResponse<PageResponse<PositionResponseDto>>> getAll(
             @PathVariable Long companyId,
             @RequestParam(required = false) Long departmentId,
-            @RequestParam(required = false) PositionStatus status
+            @RequestParam(required = false) PositionStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                positionService.getAll(companyId, departmentId, status)
+                positionService.getAll(companyId, departmentId, status, page, size)
         ));
     }
 

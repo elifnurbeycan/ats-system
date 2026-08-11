@@ -10,6 +10,7 @@ import com.yasarbilgi.ats.candidate.repository.CandidateRepository;
 import com.yasarbilgi.ats.candidate.service.CandidateService;
 import com.yasarbilgi.ats.candidateprocess.repository.CandidateProcessRepository;
 import com.yasarbilgi.ats.common.exception.BusinessRuleException;
+import com.yasarbilgi.ats.common.contract.ApplicationContract;
 import com.yasarbilgi.ats.common.exception.ResourceNotFoundException;
 import com.yasarbilgi.ats.common.response.PageResponse;
 import com.yasarbilgi.ats.company.repository.CompanyRepository;
@@ -41,15 +42,29 @@ public class CandidateServiceImpl implements CandidateService {
     public PageResponse<CandidateResponseDto> getAll(
             Long companyId,
             String search,
+            boolean includeInactive,
             int page,
-            int size
+            int size,
+            String sortBy,
+            String sortDirection
     ) {
         validateCompany(companyId);
         validatePageRequest(page, size);
 
-        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Sort.Direction direction;
+        try {
+            direction = Sort.Direction.fromString(sortDirection);
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessRuleException("Sıralama yönü asc veya desc olmalıdır.");
+        }
+        Sort sort = switch (sortBy) {
+            case "name" -> Sort.by(direction, "firstName").and(Sort.by(direction, "lastName"));
+            case "createdAt" -> Sort.by(direction, "createdAt");
+            default -> throw new BusinessRuleException("Sıralama alanı name veya createdAt olmalıdır.");
+        };
+        PageRequest pageable = PageRequest.of(page, size, sort);
         Page<Candidate> candidates = dataScopeService.hasCompanyScope()
-                ? candidateRepository.searchActiveCandidates(companyId, normalizeNullable(search), pageable)
+                ? candidateRepository.searchCandidates(companyId, normalizeNullable(search), includeInactive, pageable)
                 : candidateRepository.searchActiveCandidatesByDepartmentIds(companyId,
                         requireManagedDepartments(), normalizeNullable(search), pageable);
 
@@ -133,8 +148,8 @@ public class CandidateServiceImpl implements CandidateService {
             throw new BusinessRuleException("Sayfa numarası sıfırdan küçük olamaz.");
         }
 
-        if (size < 1 || size > 100) {
-            throw new BusinessRuleException("Sayfa boyutu 1 ile 100 arasında olmalıdır.");
+        if (size < 1 || size > ApplicationContract.MAX_PAGE_SIZE) {
+            throw new BusinessRuleException("Sayfa boyutu 1 ile " + ApplicationContract.MAX_PAGE_SIZE + " arasında olmalıdır.");
         }
     }
 
@@ -207,6 +222,18 @@ public class CandidateServiceImpl implements CandidateService {
         Candidate candidate = getCandidate(companyId, candidateId);
         requireCandidateAccess(companyId, candidateId);
         candidate.deactivate();
+    }
+
+    @Override
+    @Transactional
+    public void activate(Long companyId, Long candidateId) {
+        validateCompany(companyId);
+        if (!dataScopeService.hasCompanyScope()) {
+            throw new ForbiddenException("Silinen adayı yalnızca şirket kapsamındaki kullanıcılar geri yükleyebilir.");
+        }
+        Candidate candidate = candidateRepository.findByCompanyIdAndId(companyId, candidateId)
+                .orElseThrow(() -> new ResourceNotFoundException("Aday bulunamadı: " + candidateId));
+        candidate.activate();
     }
 }
 

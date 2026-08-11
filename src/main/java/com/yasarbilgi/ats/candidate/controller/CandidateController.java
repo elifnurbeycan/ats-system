@@ -30,11 +30,14 @@ public class CandidateController {
     public ResponseEntity<ApiResponse<PageResponse<CandidateResponseDto>>> getAll(
             @PathVariable Long companyId,
             @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "false") boolean includeInactive,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDirection
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                candidateService.getAll(companyId, search, page, size)
+                candidateService.getAll(companyId, search, includeInactive, page, size, sortBy, sortDirection)
         ));
     }
 
@@ -72,6 +75,13 @@ public class CandidateController {
     ) {
         candidateService.deactivate(companyId, candidateId);
         return ResponseEntity.ok(ApiResponse.success("Aday silindi.", null));
+    }
+
+    @PatchMapping("/{candidateId}/activate")
+    public ResponseEntity<ApiResponse<Void>> activate(@PathVariable Long companyId,
+                                                       @PathVariable Long candidateId) {
+        candidateService.activate(companyId, candidateId);
+        return ResponseEntity.ok(ApiResponse.success("Aday geri yüklendi.", null));
     }
 }
 

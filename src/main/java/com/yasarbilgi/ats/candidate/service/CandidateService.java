@@ -11,8 +11,11 @@ public interface CandidateService {
     PageResponse<CandidateResponseDto> getAll(
             Long companyId,
             String search,
+            boolean includeInactive,
             int page,
-            int size
+            int size,
+            String sortBy,
+            String sortDirection
     );
 
     // Aday profilini aktif işe alım süreçleriyle birlikte getirir.
@@ -27,4 +30,6 @@ public interface CandidateService {
 
     // Adayı pasifleştirir (silme işlemi yerine yumuşak silme).
     void deactivate(Long companyId, Long candidateId);
+
+    void activate(Long companyId, Long candidateId);
 }

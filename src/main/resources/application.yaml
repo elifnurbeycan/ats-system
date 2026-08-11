@@ -36,6 +36,15 @@ spring:
           starttls:
             enable: ${MAIL_STARTTLS_ENABLED:true}
 
+  servlet:
+    multipart:
+      max-file-size: 6MB
+      max-request-size: 6MB
+
+ats:
+  storage:
+    cv-path: ${ATS_CV_STORAGE_PATH:./data/uploads/cv}
+
 server:
   port: ${SERVER_PORT:8080}
   servlet:

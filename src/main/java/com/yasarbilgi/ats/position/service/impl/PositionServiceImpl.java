@@ -17,8 +17,11 @@ import com.yasarbilgi.ats.position.mapper.PositionMapper;
 import com.yasarbilgi.ats.position.repository.PositionRepository;
 import com.yasarbilgi.ats.position.service.PositionService;
 import com.yasarbilgi.ats.security.service.DataScopeService;
+import com.yasarbilgi.ats.common.response.PageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -65,10 +68,12 @@ public class PositionServiceImpl implements PositionService {
 
     // Pozisyonları isteğe bağlı departman ve durum filtreleriyle getirir.
     @Override
-    public List<PositionResponseDto> getAll(
+    public PageResponse<PositionResponseDto> getAll(
             Long companyId,
             Long departmentId,
-            PositionStatus status
+            PositionStatus status,
+            int page,
+            int size
     ) {
         getCompany(companyId);
 
@@ -77,17 +82,13 @@ public class PositionServiceImpl implements PositionService {
             dataScopeService.requireDepartmentAccess(departmentId);
         }
 
-        var managedDepartmentIds = dataScopeService.getManagedDepartmentIds();
-
-        return positionRepository.findAllByCompanyIdAndActiveTrueOrderByTitleAsc(companyId)
-                .stream()
-                .filter(position -> departmentId == null
-                        || position.getDepartment().getId().equals(departmentId))
-                .filter(position -> dataScopeService.hasCompanyScope()
-                        || managedDepartmentIds.contains(position.getDepartment().getId()))
-                .filter(position -> status == null || position.getStatus() == status)
-                .map(positionMapper::toResponseDto)
-                .toList();
+        validatePageRequest(page, size);
+        PageRequest pageable = PageRequest.of(page, size, Sort.by("title").ascending());
+        var result = dataScopeService.hasCompanyScope()
+                ? positionRepository.search(companyId, departmentId, status, pageable)
+                : positionRepository.searchByDepartmentScope(companyId,
+                        requireManagedDepartments(), departmentId, status, pageable);
+        return PageResponse.from(result, positionMapper::toResponseDto);
     }
 
     // Pozisyon detayını şirket sınırı içerisinde getirir.
@@ -253,5 +254,16 @@ public class PositionServiceImpl implements PositionService {
         }
 
         return description.trim();
+    }
+
+    private void validatePageRequest(int page, int size) {
+        if (page < 0 || size < 1 || size > 100) throw new BusinessRuleException("Geçersiz sayfalama bilgisi.");
+    }
+
+    private java.util.Set<Long> requireManagedDepartments() {
+        java.util.Set<Long> ids = dataScopeService.getManagedDepartmentIds();
+        if (ids.isEmpty()) throw new com.yasarbilgi.ats.common.exception.ForbiddenException(
+                "Yönetilen aktif bir departman bulunmuyor.");
+        return ids;
     }
 }

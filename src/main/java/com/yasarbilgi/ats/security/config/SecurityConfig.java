@@ -44,6 +44,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/application-contract").permitAll()
                         .requestMatchers("/api/v1/platform/**", "/api/v1/auth/platform/me")
                         .hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/auth/me").authenticated()
@@ -51,6 +52,9 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/companies/*/audit-logs/**")
                         .hasAuthority("AUDIT_VIEW")
+
+                        .requestMatchers("/api/v1/companies/*/contact-leads/**")
+                        .hasAnyRole("HR", "RECRUITER")
 
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/companies/*/candidate-processes/*/compensation")
@@ -137,6 +141,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/v1/companies/*/candidates/**")
                         .hasAuthority("CANDIDATE_UPDATE")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/companies/*/candidates/**")
+                        .hasAuthority("CANDIDATE_UPDATE")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/companies/*/candidates/**")
                         .hasAuthority("CANDIDATE_UPDATE")
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/companies/*/dashboard")
