@@ -1,37 +1,82 @@
-# ATS System
+# ATS System Backend
 
-Role-based applicant tracking and recruitment process management backend.
+ATS System; adayların, ilk iletişim kayıtlarının, başvuruların, departmanların, pozisyonların ve işe alım pipeline'larının yönetilmesini sağlayan rol ve yetki bazlı bir Applicant Tracking System backend uygulamasıdır.
 
-The system enables HR teams to centrally track candidates contacted through
-LinkedIn or other channels, manage recruitment processes, record interactions
-and interviews, and protect sensitive candidate information through
-role-based permissions.
+Frontend repository:  
+https://github.com/elifnurbeycan/ats-system-frontend
 
-## Technology Stack
+## Özellikler
+
+- JWT tabanlı kimlik doğrulama
+- Rol ve izin bazlı yetkilendirme
+- Çok şirketli veri yapısı
+- Aday ve başvuru yönetimi
+- İlk iletişim havuzu
+- İletişim ret nedenleri ve notları
+- Departman ve pozisyon yönetimi
+- Özelleştirilebilir pipeline ve aşamalar
+- Aday süreç geçmişi
+- Audit log kayıtları
+- CV yükleme ve indirme
+- Sayfalama, filtreleme ve sıralama
+- Dashboard ve raporlama servisleri
+- Excel dışa aktarma desteği
+- E-posta bildirimleri
+- Rate limiting ve brute-force koruması
+- Merkezi exception yönetimi
+- Soft-delete ve arşivleme desteği
+
+## Kullanılan Teknolojiler
 
 - Java 21
 - Spring Boot 3.5.16
+- Spring Web
 - Spring Security
+- OAuth2 Resource Server
 - Spring Data JPA
-- PostgreSQL
+- Spring Validation
+- Spring AOP
+- Spring Mail
+- Spring Actuator
+- PostgreSQL 17
 - Flyway
-- MapStruct
+- Redis
 - JWT
+- MapStruct
+- Lombok
 - Maven
 
-## Requirements
-
-Before running the project, install:
+## Gereksinimler
 
 - JDK 21
 - PostgreSQL 17
-- Maven 3.9+
+- Maven 3.9 veya Maven Wrapper
 - Git
+- İsteğe bağlı olarak Redis
+- İsteğe bağlı olarak Docker ve Mailpit
 
-## Database Setup
+## Repository'yi Klonlama
 
-Create a PostgreSQL database from `template0`. This avoids encoding errors on
-PostgreSQL installations whose default `template1` database uses `SQL_ASCII`:
+```powershell
+git clone https://github.com/elifnurbeycan/ats-system.git
+cd ats-system
+```
+
+## Veritabanı Oluşturma
+
+PostgreSQL kurulumu `SQL_ASCII` template kullanıyorsa UTF-8 veritabanı doğrudan oluşturulamayabilir. Bu nedenle veritabanı `template0` üzerinden oluşturulmalıdır:
+
+```powershell
+& "C:\Program Files\PostgreSQL\17\bin\createdb.exe" `
+  -h localhost `
+  -p 5432 `
+  -U postgres `
+  -T template0 `
+  -E UTF8 `
+  ats_system
+```
+
+Alternatif SQL komutu:
 
 ```sql
 CREATE DATABASE ats_system
@@ -41,28 +86,44 @@ CREATE DATABASE ats_system
     ENCODING = 'UTF8';
 ```
 
-PowerShell alternative:
+Veritabanı kodlamasını kontrol etmek için:
 
 ```powershell
-& "C:\Program Files\PostgreSQL\17\bin\createdb.exe" `
-  -h localhost -p 5432 -U postgres `
-  -T template0 -E UTF8 ats_system
+& "C:\Program Files\PostgreSQL\17\bin\psql.exe" `
+  -h localhost `
+  -p 5432 `
+  -U postgres `
+  -d postgres `
+  -c "\l ats_system"
 ```
 
-Restore the anonymized development database included in the repository:
+## Geliştirme Veritabanını Geri Yükleme
+
+Repository içerisinde anonimleştirilmiş geliştirme veritabanı bulunmaktadır:
+
+```text
+database/ats_system_seed.dump
+```
+
+Yedeği geri yüklemek için:
 
 ```powershell
 & "C:\Program Files\PostgreSQL\17\bin\pg_restore.exe" `
-  -h localhost -p 5432 -U postgres `
-  -d ats_system --no-owner --no-privileges -v `
+  -h localhost `
+  -p 5432 `
+  -U postgres `
+  -d ats_system `
+  --no-owner `
+  --no-privileges `
+  -v `
   ".\database\ats_system_seed.dump"
 ```
 
-Default local ports are frontend `3000`, backend `8080`, and PostgreSQL `5432`.
+Bu yedek gerçek parola, token, audit log, CV dosyası veya kişisel aday bilgisi içermez.
 
-## Local Configuration
+## Yerel Konfigürasyon
 
-Copy the example development configuration:
+Örnek geliştirme konfigürasyonunu kopyalayın:
 
 ```powershell
 Copy-Item `
@@ -70,58 +131,139 @@ Copy-Item `
   src/main/resources/application-dev.yaml
 ```
 
-Open `application-dev.yaml` and replace:
+`application-dev.yaml` içerisindeki PostgreSQL bağlantı bilgilerini kendi ortamınıza göre düzenleyin:
 
 ```yaml
-password: CHANGE_ME
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ats_system
+    username: postgres
+    password: POSTGRESQL_PAROLANIZ
 ```
 
-with your local PostgreSQL password.
+`application-dev.yaml` yerel parola içerebileceği için GitHub'a gönderilmemelidir.
 
-`application-dev.yaml` contains local credentials and must not be committed.
+## Uygulamayı Çalıştırma
 
-## Running the Application
-
-Activate the `dev` profile:
+Maven Wrapper ile:
 
 ```powershell
-mvn spring-boot:run -Dspring-boot.run.profiles=dev
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
-Alternatively, configure the following environment variable in IntelliJ:
-
-```text
-SPRING_PROFILES_ACTIVE=dev
-```
-
-## Running Tests
+Sistemde Maven kuruluysa:
 
 ```powershell
-mvn clean test -Dspring.profiles.active=dev
+mvn spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
-## Configuration Profiles
-
-- `application.yaml`: Shared application configuration
-- `application-dev.yaml`: Local development credentials; ignored by Git
-- `application-dev.example.yaml`: Example configuration committed to Git
-- Production secrets must be supplied through environment variables or a
-  secret-management service.
-
-## Commit Convention
-
-This project follows Conventional Commits:
+Backend varsayılan olarak aşağıdaki adreste çalışır:
 
 ```text
-feat: add a new feature
-fix: correct an application error
-refactor: restructure code without changing behavior
-test: add or update tests
-docs: update documentation
-build: update dependencies or build configuration
-chore: perform maintenance work
+http://localhost:8080
 ```
 
-## Project Status
+## Testleri Çalıştırma
 
-The project is currently under active development.
+Maven Wrapper ile:
+
+```powershell
+.\mvnw.cmd clean test
+```
+
+Maven ile:
+
+```powershell
+mvn clean test
+```
+
+## Mailpit ile E-posta Testi
+
+Mailpit container'ını çalıştırın:
+
+```powershell
+docker run --name ats-mailpit -d `
+  -p 1025:1025 `
+  -p 8025:8025 `
+  axllent/mailpit
+```
+
+Mailpit arayüzü:
+
+```text
+http://localhost:8025
+```
+
+SMTP bağlantısı:
+
+```text
+Host: localhost
+Port: 1025
+```
+
+Daha önce oluşturulmuş container'ı yeniden çalıştırmak için:
+
+```powershell
+docker start ats-mailpit
+```
+
+## Yerel Portlar
+
+| Servis | Port |
+|---|---:|
+| Frontend | `3000` |
+| Backend | `8080` |
+| PostgreSQL | `5432` |
+| Mailpit SMTP | `1025` |
+| Mailpit arayüzü | `8025` |
+
+## Proje Yapısı
+
+```text
+src/main/java/com/yasarbilgi/ats/
+├── auth/               Kimlik doğrulama
+├── candidate/          Aday işlemleri
+├── candidateprocess/   Başvuru ve süreç yönetimi
+├── communication/      İlk iletişim yönetimi
+├── department/         Departman yönetimi
+├── position/           Pozisyon yönetimi
+├── pipeline/           Pipeline ve aşama yönetimi
+├── dashboard/          Dashboard ve raporlama
+├── audit/              Audit kayıtları
+├── security/           Güvenlik yapılandırmaları
+├── common/             Ortak sınıflar ve exception yönetimi
+├── company/            Şirket yönetimi
+├── role/               Rol yönetimi
+├── permission/         İzin yönetimi
+└── user/               Kullanıcı yönetimi
+
+src/main/resources/
+├── db/migration/       Flyway migration dosyaları
+├── application.yaml
+├── application-dev.example.yaml
+└── application-dev.yaml
+```
+
+## Güvenlik Notları
+
+- Gerçek parolalar ve token'lar repository'ye eklenmemelidir.
+- `application-dev.yaml` Git tarafından takip edilmemelidir.
+- Yetki kontrolleri yalnızca frontend'e bırakılmamalıdır.
+- Üretim ortamında JWT anahtarları ve veritabanı parolaları environment variable veya secret manager üzerinden sağlanmalıdır.
+- Üretim ortamında dosya depolama ve e-posta ayarları ayrıca yapılandırılmalıdır.
+
+## Commit Standardı
+
+```text
+feat: yeni özellik
+fix: hata düzeltmesi
+refactor: davranışı değiştirmeyen kod düzenlemesi
+docs: dokümantasyon değişikliği
+test: test ekleme veya güncelleme
+build: bağımlılık veya build değişikliği
+chore: bakım işlemi
+```
+
+## Proje Durumu
+
+Proje aktif olarak geliştirilmektedir.
