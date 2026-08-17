@@ -213,7 +213,7 @@ public class PipelineServiceImpl implements PipelineService {
     // Pipeline entity'sini aşamalarıyla birlikte ayrıntılı yanıta dönüştürür.
     private PipelineDetailResponseDto toDetail(RecruitmentPipeline pipeline) {
         List<PipelineStageResponseDto> stages = stageRepository
-                .findAllByCompanyIdAndPipelineIdOrderByDisplayOrderAsc(
+                .findAllByCompanyIdAndPipelineIdAndActiveTrueOrderByDisplayOrderAsc(
                         pipeline.getCompany().getId(), pipeline.getId()).stream()
                 .map(pipelineMapper::toStageResponseDto).toList();
         return new PipelineDetailResponseDto(pipeline.getId(), pipeline.getName(), pipeline.getCode(),
