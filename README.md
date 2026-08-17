@@ -30,7 +30,8 @@ Before running the project, install:
 
 ## Database Setup
 
-Create a PostgreSQL database:
+Create a PostgreSQL database from `template0`. This avoids encoding errors on
+PostgreSQL installations whose default `template1` database uses `SQL_ASCII`:
 
 ```sql
 CREATE DATABASE ats_system
@@ -39,6 +40,25 @@ CREATE DATABASE ats_system
     TEMPLATE = template0
     ENCODING = 'UTF8';
 ```
+
+PowerShell alternative:
+
+```powershell
+& "C:\Program Files\PostgreSQL\17\bin\createdb.exe" `
+  -h localhost -p 5432 -U postgres `
+  -T template0 -E UTF8 ats_system
+```
+
+Restore the anonymized development database included in the repository:
+
+```powershell
+& "C:\Program Files\PostgreSQL\17\bin\pg_restore.exe" `
+  -h localhost -p 5432 -U postgres `
+  -d ats_system --no-owner --no-privileges -v `
+  ".\database\ats_system_seed.dump"
+```
+
+Default local ports are frontend `3000`, backend `8080`, and PostgreSQL `5432`.
 
 ## Local Configuration
 
