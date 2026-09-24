@@ -1,6 +1,7 @@
 package com.yasarbilgi.ats.security.filter;
 
 import com.yasarbilgi.ats.security.handler.SecurityErrorWriter;
+import com.yasarbilgi.ats.user.repository.UserRepository;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class TenantIsolationFilter extends OncePerRequestFilter {
             Pattern.compile("^/api/v1/companies/(\\d+)(?:/.*)?$");
 
     private final SecurityErrorWriter errorWriter;
+    private final UserRepository userRepository;
 
     // Token şirketi ile URL'deki şirketi karşılaştırarak tenant geçişini engeller.
     @Override
@@ -47,7 +49,7 @@ public class TenantIsolationFilter extends OncePerRequestFilter {
             return;
         }
 
-        Number tokenCompanyId = jwtAuthentication.getToken().getClaim("companyId");
+        Number tokenCompanyId = resolveCompanyId(jwtAuthentication);
         long requestedCompanyId = Long.parseLong(matcher.group(1));
         if (tokenCompanyId == null || tokenCompanyId.longValue() != requestedCompanyId) {
             errorWriter.write(request, response, HttpStatus.FORBIDDEN.value(),
@@ -55,5 +57,16 @@ public class TenantIsolationFilter extends OncePerRequestFilter {
             return;
         }
         filterChain.doFilter(request, response);
+    }
+
+    // Keycloak oturumunda tenant bilgisini değiştirilebilir kullanıcı claim'inden
+    // değil, token subject'iyle eşleşen ATS kullanıcı kaydından alır.
+    private Number resolveCompanyId(JwtAuthenticationToken authentication) {
+        String subject = authentication.getToken().getSubject();
+        if (subject != null && !subject.isBlank()) {
+            var user = userRepository.findByKeycloakUserIdAndActiveTrue(subject);
+            if (user.isPresent()) return user.get().getCompany().getId();
+        }
+        return authentication.getToken().getClaim("companyId");
     }
 }

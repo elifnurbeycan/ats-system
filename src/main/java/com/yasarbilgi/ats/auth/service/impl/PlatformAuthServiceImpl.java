@@ -9,7 +9,6 @@ import com.yasarbilgi.ats.common.exception.UnauthorizedException;
 import com.yasarbilgi.ats.security.config.JwtProperties;
 import com.yasarbilgi.ats.permission.entity.PermissionCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
@@ -23,16 +22,12 @@ import java.util.*;
 public class PlatformAuthServiceImpl implements PlatformAuthService {
     private final PlatformAdminRepository adminRepository;
     private final PlatformRefreshTokenRepository refreshRepository;
-    private final PasswordEncoder passwordEncoder;
     private final JwtEncoder jwtEncoder;
     private final JwtProperties properties;
     private final SecureRandom secureRandom = new SecureRandom();
     // Platform yöneticisini doğrulayıp token çifti oluşturur.
     @Override @Transactional public TokenResponseDto login(PlatformLoginRequestDto request) {
-        PlatformAdmin admin = adminRepository.findByEmailIgnoreCase(request.email().trim())
-                .filter(PlatformAdmin::isActive).orElseThrow(this::invalidCredentials);
-        if (!passwordEncoder.matches(request.password(), admin.getPasswordHash())) throw invalidCredentials();
-        return issue(admin);
+        throw new UnauthorizedException("Platform şifreleri Keycloak tarafından yönetilir. Keycloak ile giriş yapın.");
     }
     // Tek kullanımlık platform refresh tokenını yeniler.
     @Override @Transactional public TokenResponseDto refresh(RefreshTokenRequestDto request) {

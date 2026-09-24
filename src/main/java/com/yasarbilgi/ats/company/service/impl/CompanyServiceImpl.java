@@ -16,7 +16,6 @@ import com.yasarbilgi.ats.user.entity.*;
 import com.yasarbilgi.ats.user.repository.UserRepository;
 import com.yasarbilgi.ats.security.keycloak.KeycloakCompanyAdminClient;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -35,7 +34,6 @@ public class CompanyServiceImpl implements CompanyService {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     private final KeycloakCompanyAdminClient keycloakCompanyAdminClient;
 
     // Yeni şirketi varsayılan roller, yetkiler, Company Admin ve İK kullanıcısıyla birlikte kurar.
@@ -123,7 +121,6 @@ public class CompanyServiceImpl implements CompanyService {
                                    String email, Role role) {
         return userRepository.save(User.builder().company(company).firstName(request.firstName().trim())
                 .lastName(request.lastName().trim()).email(email)
-                .passwordHash(passwordEncoder.encode(request.temporaryPassword()))
                 .status(UserStatus.ACTIVE).roles(new HashSet<>(Set.of(role))).build());
     }
 

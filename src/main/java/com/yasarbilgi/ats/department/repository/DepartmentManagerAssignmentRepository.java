@@ -30,6 +30,7 @@ public interface DepartmentManagerAssignmentRepository
             Long departmentId
     );
 
+    @EntityGraph(attributePaths = {"department", "user"})
     List<DepartmentManagerAssignment> findAllByCompanyIdAndUserIdAndActiveTrue(
             Long companyId,
             Long userId

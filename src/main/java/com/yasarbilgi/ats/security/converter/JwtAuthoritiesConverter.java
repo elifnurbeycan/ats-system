@@ -21,19 +21,25 @@ public class JwtAuthoritiesConverter implements Converter<Jwt, Collection<Grante
     @Override
     public Collection<GrantedAuthority> convert(Jwt jwt) {
         Set<GrantedAuthority> authorities = new HashSet<>();
-        Set<String> roles = new HashSet<>(getStringClaim(jwt, "roles"));
-        roles.addAll(getNestedStringClaim(jwt, "realm_access", "roles"));
-        roles.addAll(getNestedStringClaim(jwt, "resource_access", "ats-backend", "roles"));
-        // Keycloak'ta rol mapper'ı bulunmasa bile ATS veritabanındaki şirket rolünü
-        // token subject'i üzerinden yetkilere taşırız.
-        if (jwt.getSubject() != null) {
-            userRepository.findByKeycloakUserIdAndActiveTrue(jwt.getSubject()).ifPresent(user -> {
-                user.getRoles().forEach(role -> roles.add(role.getCode()));
-                user.getRoles().stream().flatMap(role -> role.getPermissions().stream())
-                        .filter(permission -> permission.isActive())
-                        .map(permission -> permission.getCode().name())
-                        .forEach(permission -> authorities.add(new SimpleGrantedAuthority(permission)));
-            });
+        Set<String> roles = new HashSet<>();
+        var atsUser = jwt.getSubject() == null ? Optional.<com.yasarbilgi.ats.user.entity.User>empty()
+                : userRepository.findByKeycloakUserIdAndActiveTrue(jwt.getSubject());
+
+        if (atsUser.isPresent()) {
+            // Tenant kullanıcılarında rol ve permission için tek güvenilir kaynak ATS
+            // veritabanıdır. Keycloak kullanıcı attribute'larından gelen claim'ler
+            // yetki yükseltmek amacıyla kullanılamaz.
+            var user = atsUser.get();
+            user.getRoles().forEach(role -> roles.add(role.getCode()));
+            user.getRoles().stream().flatMap(role -> role.getPermissions().stream())
+                    .filter(permission -> permission.isActive())
+                    .map(permission -> permission.getCode().name())
+                    .forEach(permission -> authorities.add(new SimpleGrantedAuthority(permission)));
+        } else {
+            // ATS tenant kullanıcısı olmayan hesaplarda yalnızca platform yönetici
+            // rolü kabul edilir; diğer realm rolleri tenant API yetkisi sağlamaz.
+            Set<String> realmRoles = new HashSet<>(getNestedStringClaim(jwt, "realm_access", "roles"));
+            if (realmRoles.contains("SUPER_ADMIN")) roles.add("SUPER_ADMIN");
         }
         roles.forEach(role ->
                 authorities.add(new SimpleGrantedAuthority("ROLE_" + role)));
@@ -43,8 +49,6 @@ public class JwtAuthoritiesConverter implements Converter<Jwt, Collection<Grante
                     .map(SimpleGrantedAuthority::new)
                     .forEach(authorities::add);
         }
-        getStringClaim(jwt, "permissions").forEach(permission ->
-                authorities.add(new SimpleGrantedAuthority(permission)));
         return authorities;
     }
 

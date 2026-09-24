@@ -57,8 +57,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/companies/*/audit-logs/**")
                         .hasAuthority("AUDIT_VIEW")
 
-                        .requestMatchers("/api/v1/companies/*/contact-leads/**")
-                        .hasAnyRole("HR", "RECRUITER")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/companies/*/contact-leads/**")
+                        .hasAuthority("CONTACT_LEAD_VIEW")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/companies/*/contact-leads")
+                        .hasAuthority("CONTACT_LEAD_CREATE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/companies/*/contact-leads/*/resolve")
+                        .hasAuthority("CONTACT_LEAD_RESOLVE")
 
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/companies/*/candidate-processes/*/compensation")
@@ -75,6 +79,8 @@ public class SecurityConfig {
                         .hasRole("COMPANY_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/companies/*/users")
                         .hasAuthority("USER_CREATE")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/companies/*/users/*/reset-password")
+                        .hasAuthority("USER_UPDATE")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/companies/*/users/*/roles")
                         .hasAuthority("USER_ROLE_ASSIGN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/companies/*/users/*")
@@ -218,9 +224,6 @@ public class SecurityConfig {
         String keycloakIssuer = properties.keycloakIssuer();
         if (properties.keycloakRequired() && (keycloakIssuer == null || keycloakIssuer.isBlank())) {
             throw new IllegalStateException("KEYCLOAK_ISSUER, Keycloak zorunlu modda boş bırakılamaz.");
-        }
-        if (properties.keycloakRequired() && properties.keycloakAudience().isBlank()) {
-            throw new IllegalStateException("KEYCLOAK_AUDIENCE, Keycloak zorunlu modda boş bırakılamaz.");
         }
         if (keycloakIssuer == null || keycloakIssuer.isBlank()) return legacyDecoder;
 

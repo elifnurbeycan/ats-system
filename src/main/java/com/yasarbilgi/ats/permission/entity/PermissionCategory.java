@@ -8,6 +8,7 @@ public enum PermissionCategory {
     CANDIDATE,
     CANDIDATE_NOTE,
     CANDIDATE_EVALUATION,
+    CONTACT_LEAD,
     CANDIDATE_PROCESS,
     COMPENSATION,
     INTERVIEW,
