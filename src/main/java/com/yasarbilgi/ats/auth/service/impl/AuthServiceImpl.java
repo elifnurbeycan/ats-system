@@ -15,7 +15,6 @@ import com.yasarbilgi.ats.user.entity.*;
 import com.yasarbilgi.ats.user.repository.UserRepository;
 import com.yasarbilgi.ats.department.repository.DepartmentManagerAssignmentRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
@@ -34,7 +33,6 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final DepartmentManagerAssignmentRepository managerAssignmentRepository;
     private final RefreshTokenRepository refreshTokenRepository;
-    private final PasswordEncoder passwordEncoder;
     private final JwtEncoder jwtEncoder;
     private final JwtProperties jwtProperties;
     private final SecureRandom secureRandom = new SecureRandom();
@@ -45,9 +43,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByCompanyCodeIgnoreCaseAndEmailIgnoreCase(
                         request.companyCode().trim().toLowerCase(Locale.ROOT), request.email().trim())
                 .orElseThrow(this::invalidCredentials);
-        validateLoginUser(user);
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) throw invalidCredentials();
-        return issueTokenPair(user);
+        throw new UnauthorizedException("Şifreler Keycloak tarafından yönetilir. Keycloak ile giriş yapın.");
     }
 
     // Refresh tokenı tek kullanımlık olacak şekilde döndürür ve yeni token çifti verir.
@@ -73,22 +69,19 @@ public class AuthServiceImpl implements AuthService {
     public AuthenticatedUserResponseDto getCurrentUser(Jwt jwt) {
         Number userIdClaim = jwt.getClaim("userId");
         Number companyIdClaim = jwt.getClaim("companyId");
-        if (jwtProperties.keycloakRequired() && (userIdClaim == null || companyIdClaim == null)) {
-            throw new UnauthorizedException("Keycloak kullanıcı eşleştirmesi eksik.");
-        }
         User user;
-        if (userIdClaim != null && companyIdClaim != null) {
-            user = userRepository.findWithDetailsByCompanyIdAndId(
-                            companyIdClaim.longValue(), userIdClaim.longValue())
-                    .filter(User::isActive)
-                    .orElseThrow(() -> new UnauthorizedException("Oturum kullanıcısı bulunamadı."));
-        } else if (jwtProperties.keycloakRequired()) {
+        if (jwtProperties.keycloakRequired()) {
             String subject = jwt.getSubject();
             if (subject == null || subject.isBlank()) {
                 throw new UnauthorizedException("Keycloak kullanıcı kimliği bulunamadı.");
             }
             user = userRepository.findByKeycloakUserIdAndActiveTrue(subject)
                     .orElseThrow(() -> new UnauthorizedException("Keycloak kullanıcısı ATS kullanıcısıyla eşleştirilemedi."));
+        } else if (userIdClaim != null && companyIdClaim != null) {
+            user = userRepository.findWithDetailsByCompanyIdAndId(
+                            companyIdClaim.longValue(), userIdClaim.longValue())
+                    .filter(User::isActive)
+                    .orElseThrow(() -> new UnauthorizedException("Oturum kullanıcısı bulunamadı."));
         } else {
             String email = jwt.getClaimAsString("email");
             if (email == null || email.isBlank()) {
@@ -139,8 +132,7 @@ public class AuthServiceImpl implements AuthService {
     // Kullanıcının ve şirketinin giriş yapmaya uygun durumda olduğunu doğrular.
     private void validateLoginUser(User user) {
         if (!user.isActive() || !user.getCompany().isActive()
-                || user.getCompany().getStatus() != CompanyStatus.ACTIVE || user.getStatus() != UserStatus.ACTIVE
-                || user.getPasswordHash() == null) throw invalidCredentials();
+                || user.getCompany().getStatus() != CompanyStatus.ACTIVE || user.getStatus() != UserStatus.ACTIVE) throw invalidCredentials();
     }
     // Kullanıcı entity'sini oturum profili yanıtına dönüştürür.
     private AuthenticatedUserResponseDto toUserResponse(User user) {
@@ -149,7 +141,9 @@ public class AuthServiceImpl implements AuthService {
         return new AuthenticatedUserResponseDto(user.getId(), user.getCompany().getId(),
                 user.getCompany().getCode(), user.getFullName(), user.getEmail(),
                 user.getDepartment() == null ? null : user.getDepartment().getId(),
-                roles, resolvePermissions(user, roles));
+                roles, resolvePermissions(user, roles), user.getRoles().stream()
+                        .collect(java.util.stream.Collectors.toMap(Role::getCode, Role::getName,
+                                (first, second) -> first)));
     }
 
     private Set<String> resolvePermissions(User user, Set<String> roles) {

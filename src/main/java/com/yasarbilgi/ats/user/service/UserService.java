@@ -30,4 +30,7 @@ public interface UserService {
 
     // Pasif kullanıcıyı yeniden aktif hâle getirir.
     UserResponseDto activate(Long companyId, Long userId);
+
+    // Kullanıcıyı Keycloak'ta oluşturur veya mevcut hesabının geçici parolasını yeniler.
+    UserResponseDto resetPassword(Long companyId, Long userId, String temporaryPassword);
 }

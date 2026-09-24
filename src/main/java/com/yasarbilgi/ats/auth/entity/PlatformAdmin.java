@@ -16,6 +16,4 @@ public class PlatformAdmin extends BaseEntity {
     private String fullName;
     @Column(name = "email", nullable = false, length = 255)
     private String email;
-    @Column(name = "password_hash", nullable = false, length = 255)
-    private String passwordHash;
 }

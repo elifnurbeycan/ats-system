@@ -21,7 +21,17 @@ public class KeycloakCompanyAdminClient {
 
     public ProvisionedUser create(String username, String email, String firstName, String lastName,
                                   String temporaryPassword, long companyId) {
-        if (!properties.enabled()) return null;
+        return create(username, email, firstName, lastName, temporaryPassword, companyId, true);
+    }
+
+    public ProvisionedUser createCompanyUser(String username, String email, String firstName, String lastName,
+                                              String temporaryPassword, long companyId) {
+        return create(username, email, firstName, lastName, temporaryPassword, companyId, false);
+    }
+
+    private ProvisionedUser create(String username, String email, String firstName, String lastName,
+                                   String temporaryPassword, long companyId, boolean companyAdmin) {
+        if (!properties.enabled()) throw new IllegalStateException("Keycloak parola yönetimi etkin değil.");
         requireConfiguration();
         RestClient client = RestClient.create(properties.serverUrl());
         String adminToken = accessToken(client);
@@ -36,11 +46,24 @@ public class KeycloakCompanyAdminClient {
         String location = response.getHeaders().getFirst("Location");
         if (location == null || !location.contains("/users/")) throw new IllegalStateException("Keycloak kullanıcı kimliği alınamadı.");
         String userId = location.substring(location.lastIndexOf('/') + 1);
-        Map<String, Object> role = ensureRole(client, adminToken);
-        client.post().uri("/admin/realms/{realm}/users/{userId}/role-mappings/realm", properties.targetRealm(), userId)
-                .headers(headers -> headers.setBearerAuth(adminToken)).contentType(MediaType.APPLICATION_JSON)
-                .body(List.of(role)).retrieve().toBodilessEntity();
+        if (companyAdmin) {
+            Map<String, Object> role = ensureRole(client, adminToken);
+            client.post().uri("/admin/realms/{realm}/users/{userId}/role-mappings/realm", properties.targetRealm(), userId)
+                    .headers(headers -> headers.setBearerAuth(adminToken)).contentType(MediaType.APPLICATION_JSON)
+                    .body(List.of(role)).retrieve().toBodilessEntity();
+        }
         return new ProvisionedUser(userId);
+    }
+
+    public void resetPassword(String userId, String temporaryPassword) {
+        if (!properties.enabled()) throw new IllegalStateException("Keycloak parola yönetimi etkin değil.");
+        requireConfiguration();
+        RestClient client = RestClient.create(properties.serverUrl());
+        String adminToken = accessToken(client);
+        client.put().uri("/admin/realms/{realm}/users/{userId}/reset-password", properties.targetRealm(), userId)
+                .headers(headers -> headers.setBearerAuth(adminToken)).contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("type", "password", "value", temporaryPassword, "temporary", true))
+                .retrieve().toBodilessEntity();
     }
 
     @SuppressWarnings("unchecked")

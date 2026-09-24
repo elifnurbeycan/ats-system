@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface DepartmentRepository extends JpaRepository<Department, Long> {
 
@@ -28,4 +29,9 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
     Page<Department> findAllByCompanyId(Long companyId, Pageable pageable);
 
     Page<Department> findAllByCompanyIdAndActiveTrue(Long companyId, Pageable pageable);
+
+    Page<Department> findAllByCompanyIdAndIdIn(Long companyId, Set<Long> departmentIds, Pageable pageable);
+
+    Page<Department> findAllByCompanyIdAndIdInAndActiveTrue(
+            Long companyId, Set<Long> departmentIds, Pageable pageable);
 }

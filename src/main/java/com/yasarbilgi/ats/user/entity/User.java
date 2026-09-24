@@ -70,12 +70,6 @@ public class User extends TenantBaseEntity {
     )
     private String email;
 
-    @Column(
-            name = "password_hash",
-            length = 255
-    )
-    private String passwordHash;
-
     @Column(name = "keycloak_user_id", length = 100, unique = true)
     private String keycloakUserId;
 
@@ -150,14 +144,8 @@ public class User extends TenantBaseEntity {
         this.status = status;
     }
 
-    // Kullanıcının şifre özetini kaydeder ve zorunlu şifre değişimini tamamlar.
-    public void changePasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
-        this.mustChangePassword = false;
-    }
-
     public void linkKeycloakUser(String keycloakUserId) {
         this.keycloakUserId = keycloakUserId;
-        this.passwordHash = null;
+        this.mustChangePassword = false;
     }
 }

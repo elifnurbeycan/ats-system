@@ -11,10 +11,12 @@ import com.yasarbilgi.ats.department.entity.Department;
 import com.yasarbilgi.ats.department.mapper.DepartmentMapper;
 import com.yasarbilgi.ats.department.repository.DepartmentRepository;
 import com.yasarbilgi.ats.department.service.DepartmentService;
+import com.yasarbilgi.ats.security.service.DataScopeService;
 import com.yasarbilgi.ats.common.response.PageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,11 +31,13 @@ public class DepartmentServiceImpl implements DepartmentService {
     private final CompanyRepository companyRepository;
     private final DepartmentRepository departmentRepository;
     private final DepartmentMapper departmentMapper;
+    private final DataScopeService dataScopeService;
 
     // Yeni departmanı normalize edilmiş benzersiz koduyla kaydeder.
     @Override
     @Transactional
     public DepartmentResponseDto create(Long companyId, CreateDepartmentRequestDto request) {
+        dataScopeService.requireCompanyScope();
         Company company = getCompany(companyId);
         String normalizedCode = normalizeCode(request.code());
 
@@ -60,15 +64,26 @@ public class DepartmentServiceImpl implements DepartmentService {
         validatePageRequest(page, size);
 
         PageRequest pageable = PageRequest.of(page, size, Sort.by("name").ascending());
-        var departments = includeInactive
-                ? departmentRepository.findAllByCompanyId(companyId, pageable)
-                : departmentRepository.findAllByCompanyIdAndActiveTrue(companyId, pageable);
+        Page<Department> departments;
+        if (dataScopeService.hasCompanyScope()) {
+            departments = includeInactive
+                    ? departmentRepository.findAllByCompanyId(companyId, pageable)
+                    : departmentRepository.findAllByCompanyIdAndActiveTrue(companyId, pageable);
+        } else {
+            var departmentIds = dataScopeService.getManagedDepartmentIds();
+            departments = departmentIds.isEmpty() ? Page.empty(pageable)
+                    : includeInactive
+                    ? departmentRepository.findAllByCompanyIdAndIdIn(companyId, departmentIds, pageable)
+                    : departmentRepository.findAllByCompanyIdAndIdInAndActiveTrue(
+                            companyId, departmentIds, pageable);
+        }
         return PageResponse.from(departments, departmentMapper::toResponseDto);
     }
 
     // Departmanı şirket sınırı içinde kimliğine göre getirir.
     @Override
     public DepartmentResponseDto getById(Long companyId, Long departmentId) {
+        dataScopeService.requireDepartmentAccess(departmentId);
         return departmentMapper.toResponseDto(getDepartment(companyId, departmentId));
     }
 
@@ -80,6 +95,7 @@ public class DepartmentServiceImpl implements DepartmentService {
             Long departmentId,
             UpdateDepartmentRequestDto request
     ) {
+        dataScopeService.requireDepartmentAccess(departmentId);
         Department department = getDepartment(companyId, departmentId);
         department.update(
                 request.name().trim(),
@@ -93,6 +109,7 @@ public class DepartmentServiceImpl implements DepartmentService {
     @Override
     @Transactional
     public DepartmentResponseDto deactivate(Long companyId, Long departmentId) {
+        dataScopeService.requireDepartmentAccess(departmentId);
         Department department = getDepartment(companyId, departmentId);
         department.deactivate();
         return departmentMapper.toResponseDto(department);
@@ -102,6 +119,7 @@ public class DepartmentServiceImpl implements DepartmentService {
     @Override
     @Transactional
     public DepartmentResponseDto activate(Long companyId, Long departmentId) {
+        dataScopeService.requireDepartmentAccess(departmentId);
         Department department = getDepartment(companyId, departmentId);
         department.activate();
         return departmentMapper.toResponseDto(department);

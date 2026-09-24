@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import com.yasarbilgi.ats.common.response.PageResponse;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 @RestController
 @RequiredArgsConstructor
@@ -116,4 +118,20 @@ public class UserController {
                 userService.activate(companyId, userId)
         ));
     }
+
+    @PostMapping("/{userId}/reset-password")
+    public ResponseEntity<ApiResponse<UserResponseDto>> resetPassword(
+            @PathVariable Long companyId,
+            @PathVariable Long userId,
+            @Valid @RequestBody ResetPasswordRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Geçici parola Keycloak'ta yenilendi.",
+                userService.resetPassword(companyId, userId, request.temporaryPassword())
+        ));
+    }
+
+    public record ResetPasswordRequest(
+            @NotBlank @Size(min = 12, max = 200) String temporaryPassword
+    ) {}
 }

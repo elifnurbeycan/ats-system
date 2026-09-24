@@ -26,14 +26,12 @@ security:
   platform-admin:
     full-name: ${PLATFORM_ADMIN_FULL_NAME:Super Admin}
     email: ${PLATFORM_ADMIN_EMAIL:}
-    password: ${PLATFORM_ADMIN_PASSWORD:}
   jwt:
     secret: CHANGE_ME_WITH_AT_LEAST_32_CHARACTERS
     # Keycloak realm issuer; leave empty to disable Keycloak during migration.
     keycloak-issuer: http://localhost:8081/realms/ats
-    # Localde mapper kurulmadan audience doğrulaması kapalıdır.
     keycloak-audience: ""
-    keycloak-required: false
+    keycloak-required: true
   keycloak:
     admin:
       enabled: ${KEYCLOAK_ADMIN_API_ENABLED:false}

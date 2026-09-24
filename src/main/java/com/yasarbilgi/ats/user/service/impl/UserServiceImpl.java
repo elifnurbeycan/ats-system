@@ -17,9 +17,9 @@ import com.yasarbilgi.ats.user.entity.UserStatus;
 import com.yasarbilgi.ats.user.mapper.UserMapper;
 import com.yasarbilgi.ats.user.repository.UserRepository;
 import com.yasarbilgi.ats.user.service.UserService;
+import com.yasarbilgi.ats.security.keycloak.KeycloakCompanyAdminClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
@@ -42,7 +42,7 @@ public class UserServiceImpl implements UserService {
     private final DepartmentRepository departmentRepository;
     private final RoleRepository roleRepository;
     private final UserMapper userMapper;
-    private final PasswordEncoder passwordEncoder;
+    private final KeycloakCompanyAdminClient keycloakCompanyAdminClient;
 
     // Kullanıcıyı davet durumunda, seçilen departman ve rollerle oluşturur.
     @Override
@@ -60,13 +60,17 @@ public class UserServiceImpl implements UserService {
                 .firstName(request.firstName().trim())
                 .lastName(request.lastName().trim())
                 .email(normalizedEmail)
-                .passwordHash(passwordEncoder.encode(request.temporaryPassword()))
                 .department(department)
                 .status(UserStatus.ACTIVE)
                 .roles(roles)
                 .build();
 
-        return userMapper.toResponseDto(userRepository.save(user));
+        User saved = userRepository.save(user);
+        KeycloakCompanyAdminClient.ProvisionedUser keycloakUser = keycloakCompanyAdminClient.createCompanyUser(
+                normalizedEmail, normalizedEmail, saved.getFirstName(), saved.getLastName(),
+                request.temporaryPassword(), companyId);
+        saved.linkKeycloakUser(keycloakUser.userId());
+        return userMapper.toResponseDto(saved);
     }
 
     // Kullanıcıları tüm şirketten veya seçilen departmandan getirir.
@@ -143,12 +147,25 @@ public class UserServiceImpl implements UserService {
         User user = getUser(companyId, userId);
         user.activate();
 
-        if (user.getPasswordHash() == null) {
-            user.changeStatus(UserStatus.INVITED);
-        } else {
-            user.changeStatus(UserStatus.ACTIVE);
-        }
+        user.changeStatus(UserStatus.ACTIVE);
 
+        return userMapper.toResponseDto(user);
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDto resetPassword(Long companyId, Long userId, String temporaryPassword) {
+        User user = getUser(companyId, userId);
+        KeycloakCompanyAdminClient.ProvisionedUser keycloakUser;
+        if (user.getKeycloakUserId() == null || user.getKeycloakUserId().isBlank()) {
+            keycloakUser = keycloakCompanyAdminClient.createCompanyUser(
+                    user.getEmail(), user.getEmail(), user.getFirstName(), user.getLastName(),
+                    temporaryPassword, companyId);
+            user.linkKeycloakUser(keycloakUser.userId());
+        } else {
+            keycloakCompanyAdminClient.resetPassword(user.getKeycloakUserId(), temporaryPassword);
+        }
+        user.changeStatus(UserStatus.ACTIVE);
         return userMapper.toResponseDto(user);
     }
 

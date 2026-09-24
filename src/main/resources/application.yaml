@@ -72,7 +72,6 @@ security:
   platform-admin:
     full-name: ${PLATFORM_ADMIN_FULL_NAME:Super Admin}
     email: ${PLATFORM_ADMIN_EMAIL:}
-    password: ${PLATFORM_ADMIN_PASSWORD:}
   jwt:
     secret: ${JWT_SECRET}
     issuer: ${JWT_ISSUER:ats-system}
@@ -81,7 +80,7 @@ security:
     # Productionda Keycloak issuer'ı ve audience'ı zorunlu hale getirin.
     keycloak-issuer: ${KEYCLOAK_ISSUER:}
     keycloak-audience: ${KEYCLOAK_AUDIENCE:}
-    keycloak-required: ${KEYCLOAK_REQUIRED:false}
+    keycloak-required: ${KEYCLOAK_REQUIRED:true}
   keycloak:
     admin:
       enabled: ${KEYCLOAK_ADMIN_API_ENABLED:false}
