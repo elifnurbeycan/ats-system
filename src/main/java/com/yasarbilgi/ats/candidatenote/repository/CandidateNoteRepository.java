@@ -27,6 +27,9 @@ public interface CandidateNoteRepository extends JpaRepository<CandidateNote, Lo
             Pageable pageable
     );
 
+    Page<CandidateNote> findAllByCompanyIdAndCandidateIdAndEntryTypeAndActiveTrue(
+            Long companyId, Long candidateId, String entryType, Pageable pageable);
+
     // Adayın belirli sürecine ait aktif notları en yeni not önce olacak şekilde getirir.
     Page<CandidateNote>
     findAllByCompanyIdAndCandidateIdAndCandidateProcessIdAndActiveTrue(
@@ -35,4 +38,7 @@ public interface CandidateNoteRepository extends JpaRepository<CandidateNote, Lo
             Long candidateProcessId,
             Pageable pageable
     );
+
+    Page<CandidateNote> findAllByCompanyIdAndCandidateIdAndCandidateProcessIdAndEntryTypeAndActiveTrue(
+            Long companyId, Long candidateId, Long candidateProcessId, String entryType, Pageable pageable);
 }

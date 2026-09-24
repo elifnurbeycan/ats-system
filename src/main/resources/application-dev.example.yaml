@@ -29,6 +29,20 @@ security:
     password: ${PLATFORM_ADMIN_PASSWORD:}
   jwt:
     secret: CHANGE_ME_WITH_AT_LEAST_32_CHARACTERS
+    # Keycloak realm issuer; leave empty to disable Keycloak during migration.
+    keycloak-issuer: http://localhost:8081/realms/ats
+    # Localde mapper kurulmadan audience doğrulaması kapalıdır.
+    keycloak-audience: ""
+    keycloak-required: false
+  keycloak:
+    admin:
+      enabled: ${KEYCLOAK_ADMIN_API_ENABLED:false}
+      server-url: ${KEYCLOAK_ADMIN_SERVER_URL:http://localhost:8081}
+      realm: ${KEYCLOAK_ADMIN_REALM:ats}
+      client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:ats-backend-admin}
+      client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:}
+      target-realm: ${KEYCLOAK_REALM:ats}
+      company-admin-role: ${KEYCLOAK_COMPANY_ADMIN_ROLE:COMPANY_ADMIN}
 
 notifications:
   manager-review:

@@ -48,10 +48,35 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
     }
     // JWT kimliğine göre platform yöneticisi profilini getirir.
     @Override public PlatformAdminResponseDto getCurrentAdmin(Jwt jwt) {
-        Long id = ((Number) jwt.getClaim("platformAdminId")).longValue();
-        PlatformAdmin admin = adminRepository.findById(id).filter(PlatformAdmin::isActive)
-                .orElseThrow(() -> new UnauthorizedException("Platform yöneticisi bulunamadı."));
-        return new PlatformAdminResponseDto(admin.getId(), admin.getFullName(), admin.getEmail());
+        Number idClaim = jwt.getClaim("platformAdminId");
+        if (idClaim != null) {
+            PlatformAdmin admin = adminRepository.findById(idClaim.longValue()).filter(PlatformAdmin::isActive)
+                    .orElseThrow(() -> new UnauthorizedException("Platform yöneticisi bulunamadı."));
+            return new PlatformAdminResponseDto(admin.getId(), admin.getFullName(), admin.getEmail());
+        }
+
+        String email = jwt.getClaimAsString("email");
+        if (email != null && !email.isBlank()) {
+            Optional<PlatformAdmin> localAdmin = adminRepository.findByEmailIgnoreCase(email)
+                    .filter(PlatformAdmin::isActive);
+            if (localAdmin.isPresent()) {
+                PlatformAdmin admin = localAdmin.get();
+                return new PlatformAdminResponseDto(admin.getId(), admin.getFullName(), admin.getEmail());
+            }
+        }
+
+        // Keycloak access tokens do not contain the legacy platformAdminId claim.
+        // Authorization has already required SUPER_ADMIN before this method runs,
+        // so the token identity can safely be used even when it is not duplicated
+        // in the legacy platform_admins table.
+        String fullName = jwt.getClaimAsString("name");
+        if (fullName == null || fullName.isBlank()) {
+            fullName = jwt.getClaimAsString("preferred_username");
+        }
+        if (fullName == null || fullName.isBlank()) {
+            fullName = "Keycloak Admin";
+        }
+        return new PlatformAdminResponseDto(null, fullName, email);
     }
     // Platform yöneticisi için access ve refresh token çifti üretir.
     private TokenResponseDto issue(PlatformAdmin admin) {

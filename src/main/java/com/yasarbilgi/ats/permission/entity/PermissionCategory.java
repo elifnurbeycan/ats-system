@@ -6,6 +6,8 @@ public enum PermissionCategory {
     DEPARTMENT,
     POSITION,
     CANDIDATE,
+    CANDIDATE_NOTE,
+    CANDIDATE_EVALUATION,
     CANDIDATE_PROCESS,
     COMPENSATION,
     INTERVIEW,

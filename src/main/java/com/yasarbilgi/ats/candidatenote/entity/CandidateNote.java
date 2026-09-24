@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -28,6 +29,10 @@ import lombok.experimental.SuperBuilder;
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CandidateNote extends TenantBaseEntity {
+
+    @Column(name = "entry_type", nullable = false, length = 20)
+    @Builder.Default
+    private String entryType = "NOTE";
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "candidate_id", nullable = false)
