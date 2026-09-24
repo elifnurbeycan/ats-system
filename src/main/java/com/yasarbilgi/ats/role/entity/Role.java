@@ -106,4 +106,12 @@ public class Role extends TenantBaseEntity {
     public boolean hasPermission(Permission permission) {
         return permissions.contains(permission);
     }
+
+    public void updateDefinition(String name, String description, DataScope dataScope, Set<Permission> permissions) {
+        this.name = name;
+        this.description = description;
+        this.dataScope = dataScope;
+        this.permissions.clear();
+        this.permissions.addAll(permissions);
+    }
 }

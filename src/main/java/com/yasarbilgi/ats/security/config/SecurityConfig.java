@@ -14,6 +14,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
@@ -21,9 +24,10 @@ import org.springframework.security.web.SecurityFilterChain;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @Configuration
-@EnableConfigurationProperties({JwtProperties.class, PlatformAdminProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, PlatformAdminProperties.class, KeycloakAdminProperties.class})
 public class SecurityConfig {
 
     // API endpointlerini JWT, tenant ve permission kurallarıyla korur.
@@ -64,7 +68,11 @@ public class SecurityConfig {
                         .hasAuthority("CANDIDATE_COMPENSATION_UPDATE")
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/companies/*/users/**",
-                                "/api/v1/companies/*/roles/**").hasAuthority("USER_VIEW")
+                                "/api/v1/companies/*/roles").hasAuthority("USER_VIEW")
+                        .requestMatchers("/api/v1/companies/*/roles/**")
+                        .hasRole("COMPANY_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/companies/*/roles")
+                        .hasRole("COMPANY_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/companies/*/users")
                         .hasAuthority("USER_CREATE")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/companies/*/users/*/roles")
@@ -132,6 +140,25 @@ public class SecurityConfig {
                                 "/api/v1/companies/*/candidate-processes/*/stage")
                         .hasAuthority("CANDIDATE_STAGE_CHANGE")
 
+                        // Notlar ve değerlendirmeler genel aday matcher'ından önce tanımlanır;
+                        // böylece kendi yetkileri olmadan bu alt kaynaklara erişilemez.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/companies/*/candidates/*/notes")
+                        .hasAuthority("CANDIDATE_NOTE_VIEW")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/companies/*/candidates/*/notes")
+                        .hasAuthority("CANDIDATE_NOTE_CREATE")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/companies/*/candidates/*/notes/*")
+                        .hasAuthority("CANDIDATE_NOTE_UPDATE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/companies/*/candidates/*/notes/*")
+                        .hasAuthority("CANDIDATE_NOTE_UPDATE")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/companies/*/candidates/*/notes/evaluations")
+                        .hasAuthority("CANDIDATE_EVALUATION_VIEW")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/companies/*/candidates/*/notes/evaluations")
+                        .hasAuthority("CANDIDATE_EVALUATION_CREATE")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/companies/*/candidates/*/notes/evaluations/*")
+                        .hasAuthority("CANDIDATE_EVALUATION_UPDATE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/companies/*/candidates/*/notes/evaluations/*")
+                        .hasAuthority("CANDIDATE_EVALUATION_UPDATE")
+
                         .requestMatchers(HttpMethod.GET, "/api/v1/companies/*/candidates", "/api/v1/companies/*/candidates/**")
                         .hasAuthority("CANDIDATE_VIEW")
                         .requestMatchers(HttpMethod.POST, "/api/v1/companies/*/candidates")
@@ -182,10 +209,40 @@ public class SecurityConfig {
 
     // Gelen access tokenları imza, süre ve issuer bilgisiyle doğrular.
     @Bean
-    public JwtDecoder jwtDecoder(JwtProperties properties) {
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(secretKey(properties)).build();
-        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(properties.issuer()));
-        return decoder;
+    public JwtDecoder jwtDecoder(
+            JwtProperties properties
+    ) {
+        NimbusJwtDecoder legacyDecoder = NimbusJwtDecoder.withSecretKey(secretKey(properties)).build();
+        legacyDecoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(properties.issuer()));
+
+        String keycloakIssuer = properties.keycloakIssuer();
+        if (properties.keycloakRequired() && (keycloakIssuer == null || keycloakIssuer.isBlank())) {
+            throw new IllegalStateException("KEYCLOAK_ISSUER, Keycloak zorunlu modda boş bırakılamaz.");
+        }
+        if (properties.keycloakRequired() && properties.keycloakAudience().isBlank()) {
+            throw new IllegalStateException("KEYCLOAK_AUDIENCE, Keycloak zorunlu modda boş bırakılamaz.");
+        }
+        if (keycloakIssuer == null || keycloakIssuer.isBlank()) return legacyDecoder;
+
+        JwtDecoder keycloakDecoder = JwtDecoders.fromIssuerLocation(keycloakIssuer);
+        if (!properties.keycloakAudience().isBlank() && keycloakDecoder instanceof NimbusJwtDecoder nimbusDecoder) {
+            OAuth2TokenValidator<Jwt> issuerValidator = JwtValidators.createDefaultWithIssuer(keycloakIssuer);
+            OAuth2TokenValidator<Jwt> audienceValidator = new JwtClaimValidator<List<String>>(
+                    "aud",
+                    audiences -> audiences != null && audiences.contains(properties.keycloakAudience())
+            );
+            nimbusDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(issuerValidator, audienceValidator));
+        }
+        if (properties.keycloakRequired()) return keycloakDecoder;
+
+        return token -> {
+            try {
+                return keycloakDecoder.decode(token);
+            } catch (JwtException keycloakException) {
+                // Geçiş döneminde daha önce üretilen ATS tokenlarını da kabul et.
+                return legacyDecoder.decode(token);
+            }
+        };
     }
 
     // Yapılandırmadaki en az 32 karakterli sırrı HMAC anahtarına dönüştürür.

@@ -52,10 +52,22 @@ public class CandidateNoteServiceImpl implements CandidateNoteService {
                 .company(candidate.getCompany())
                 .candidate(candidate)
                 .candidateProcess(process)
+                .entryType("NOTE")
                 .content(request.content().trim())
                 .build();
 
         return candidateNoteMapper.toResponseDto(candidateNoteRepository.save(note));
+    }
+
+    @Override
+    @Transactional
+    public CandidateNoteResponseDto createEvaluation(Long companyId, Long candidateId, CreateCandidateNoteRequestDto request) {
+        Candidate candidate = getCandidate(companyId, candidateId);
+        CandidateProcess process = getCandidateProcess(companyId, candidateId, request.candidateProcessId());
+        CandidateNote evaluation = CandidateNote.builder()
+                .company(candidate.getCompany()).candidate(candidate).candidateProcess(process)
+                .entryType("EVALUATION").content(request.content().trim()).build();
+        return candidateNoteMapper.toResponseDto(candidateNoteRepository.save(evaluation));
     }
 
     // Adayın genel ve süreç notlarını veya yalnızca seçilen sürecin notlarını getirir.
@@ -74,23 +86,36 @@ public class CandidateNoteServiceImpl implements CandidateNoteService {
         Page<CandidateNote> notes;
         if (candidateProcessId == null) {
             notes = candidateNoteRepository
-                    .findAllByCompanyIdAndCandidateIdAndActiveTrue(
+                    .findAllByCompanyIdAndCandidateIdAndEntryTypeAndActiveTrue(
                             companyId,
                             candidateId,
+                            "NOTE",
                             pageable
                     );
         } else {
             getCandidateProcess(companyId, candidateId, candidateProcessId);
             notes = candidateNoteRepository
-                    .findAllByCompanyIdAndCandidateIdAndCandidateProcessIdAndActiveTrue(
+                    .findAllByCompanyIdAndCandidateIdAndCandidateProcessIdAndEntryTypeAndActiveTrue(
                             companyId,
                             candidateId,
                             candidateProcessId,
+                            "NOTE",
                             pageable
                     );
         }
 
         return PageResponse.from(notes, candidateNoteMapper::toResponseDto);
+    }
+
+    @Override
+    public PageResponse<CandidateNoteResponseDto> getEvaluations(Long companyId, Long candidateId, Long candidateProcessId, int page, int size) {
+        getCandidate(companyId, candidateId);
+        if (page < 0 || size < 1 || size > 200) throw new BusinessRuleException("Geçersiz sayfalama bilgisi.");
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<CandidateNote> evaluations = candidateProcessId == null
+                ? candidateNoteRepository.findAllByCompanyIdAndCandidateIdAndEntryTypeAndActiveTrue(companyId, candidateId, "EVALUATION", pageable)
+                : candidateNoteRepository.findAllByCompanyIdAndCandidateIdAndCandidateProcessIdAndEntryTypeAndActiveTrue(companyId, candidateId, candidateProcessId, "EVALUATION", pageable);
+        return PageResponse.from(evaluations, candidateNoteMapper::toResponseDto);
     }
 
     // Aktif aday notunun metin içeriğini günceller.
@@ -107,6 +132,15 @@ public class CandidateNoteServiceImpl implements CandidateNoteService {
         return candidateNoteMapper.toResponseDto(note);
     }
 
+    @Override
+    @Transactional
+    public CandidateNoteResponseDto updateEvaluation(Long companyId, Long candidateId, Long evaluationId, UpdateCandidateNoteRequestDto request) {
+        CandidateNote evaluation = getNote(companyId, candidateId, evaluationId);
+        if (!"EVALUATION".equals(evaluation.getEntryType())) throw new ResourceNotFoundException("Aday değerlendirmesi bulunamadı: " + evaluationId);
+        evaluation.updateContent(request.content().trim());
+        return candidateNoteMapper.toResponseDto(evaluation);
+    }
+
     // Aday notunu geçmiş kaydı korunacak şekilde pasifleştirir.
     @Override
     @Transactional
@@ -118,6 +152,15 @@ public class CandidateNoteServiceImpl implements CandidateNoteService {
         CandidateNote note = getNote(companyId, candidateId, noteId);
         note.deactivate();
         return candidateNoteMapper.toResponseDto(note);
+    }
+
+    @Override
+    @Transactional
+    public CandidateNoteResponseDto deactivateEvaluation(Long companyId, Long candidateId, Long evaluationId) {
+        CandidateNote evaluation = getNote(companyId, candidateId, evaluationId);
+        if (!"EVALUATION".equals(evaluation.getEntryType())) throw new ResourceNotFoundException("Aday değerlendirmesi bulunamadı: " + evaluationId);
+        evaluation.deactivate();
+        return candidateNoteMapper.toResponseDto(evaluation);
     }
 
     // Adayı şirket sınırı içerisinde aktif kayıtlardan getirir.

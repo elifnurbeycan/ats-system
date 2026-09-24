@@ -16,6 +16,8 @@ public interface CandidateNoteService {
             CreateCandidateNoteRequestDto request
     );
 
+    CandidateNoteResponseDto createEvaluation(Long companyId, Long candidateId, CreateCandidateNoteRequestDto request);
+
     // Aday notlarını isteğe bağlı süreç filtresiyle listeler.
     PageResponse<CandidateNoteResponseDto> getAll(
             Long companyId,
@@ -25,6 +27,8 @@ public interface CandidateNoteService {
             int size
     );
 
+    PageResponse<CandidateNoteResponseDto> getEvaluations(Long companyId, Long candidateId, Long candidateProcessId, int page, int size);
+
     // Aday notunun metin içeriğini günceller.
     CandidateNoteResponseDto update(
             Long companyId,
@@ -33,10 +37,14 @@ public interface CandidateNoteService {
             UpdateCandidateNoteRequestDto request
     );
 
+    CandidateNoteResponseDto updateEvaluation(Long companyId, Long candidateId, Long evaluationId, UpdateCandidateNoteRequestDto request);
+
     // Aday notunu fiziksel olarak silmeden pasifleştirir.
     CandidateNoteResponseDto deactivate(
             Long companyId,
             Long candidateId,
             Long noteId
     );
+
+    CandidateNoteResponseDto deactivateEvaluation(Long companyId, Long candidateId, Long evaluationId);
 }

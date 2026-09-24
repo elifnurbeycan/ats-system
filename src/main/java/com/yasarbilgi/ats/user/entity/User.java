@@ -76,6 +76,9 @@ public class User extends TenantBaseEntity {
     )
     private String passwordHash;
 
+    @Column(name = "keycloak_user_id", length = 100, unique = true)
+    private String keycloakUserId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     private Department department;
@@ -151,5 +154,10 @@ public class User extends TenantBaseEntity {
     public void changePasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
         this.mustChangePassword = false;
+    }
+
+    public void linkKeycloakUser(String keycloakUserId) {
+        this.keycloakUserId = keycloakUserId;
+        this.passwordHash = null;
     }
 }

@@ -14,6 +14,7 @@ import com.yasarbilgi.ats.role.entity.*;
 import com.yasarbilgi.ats.role.repository.RoleRepository;
 import com.yasarbilgi.ats.user.entity.*;
 import com.yasarbilgi.ats.user.repository.UserRepository;
+import com.yasarbilgi.ats.security.keycloak.KeycloakCompanyAdminClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,21 +31,12 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class CompanyServiceImpl implements CompanyService {
 
-    private static final Set<PermissionCode> READ_PERMISSIONS = EnumSet.of(
-            PermissionCode.DEPARTMENT_VIEW, PermissionCode.POSITION_VIEW,
-            PermissionCode.CANDIDATE_VIEW, PermissionCode.CANDIDATE_PROCESS_VIEW,
-            PermissionCode.CANDIDATE_COMPENSATION_VIEW, PermissionCode.INTERVIEW_VIEW,
-            PermissionCode.PIPELINE_VIEW);
-    private static final Set<PermissionCode> INTERVIEWER_PERMISSIONS = EnumSet.of(
-            PermissionCode.CANDIDATE_VIEW, PermissionCode.CANDIDATE_PROCESS_VIEW,
-            PermissionCode.INTERVIEW_VIEW, PermissionCode.INTERVIEW_EVALUATE);
-    private static final Set<PermissionCode> HR_PERMISSIONS = EnumSet.allOf(PermissionCode.class);
-
     private final CompanyRepository companyRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final KeycloakCompanyAdminClient keycloakCompanyAdminClient;
 
     // Yeni şirketi varsayılan roller, yetkiler, Company Admin ve İK kullanıcısıyla birlikte kurar.
     @Override
@@ -59,6 +51,12 @@ public class CompanyServiceImpl implements CompanyService {
                 .name(request.name().trim()).code(code).status(CompanyStatus.ACTIVE).build());
         Map<String, Role> roles = createDefaultRoles(company);
         User admin = createInitialUser(company, request.companyAdmin(), adminEmail, roles.get("COMPANY_ADMIN"));
+        KeycloakCompanyAdminClient.ProvisionedUser keycloakUser = keycloakCompanyAdminClient.create(
+                adminEmail, adminEmail, request.companyAdmin().firstName().trim(),
+                request.companyAdmin().lastName().trim(), request.companyAdmin().temporaryPassword(), company.getId());
+        if (keycloakUser != null) {
+            admin.linkKeycloakUser(keycloakUser.userId());
+        }
         return new CreatedCompanyResponseDto(toResponse(company), toInitialUser(admin, "COMPANY_ADMIN"));
     }
 
@@ -97,7 +95,8 @@ public class CompanyServiceImpl implements CompanyService {
         return toResponse(company);
     }
 
-    // Yeni şirkete ait sistem rollerini ve rol yetkilerini oluşturur.
+    // Yeni şirkette yalnızca değiştirilemeyen şirket yöneticisi rolünü oluşturur.
+    // Diğer roller şirket yöneticisi tarafından izinler seçilerek dinamik oluşturulur.
     private Map<String, Role> createDefaultRoles(Company company) {
         Map<PermissionCode, Permission> permissions = permissionRepository
                 .findAllByActiveTrueOrderByDisplayOrderAsc().stream()
@@ -107,15 +106,12 @@ public class CompanyServiceImpl implements CompanyService {
         }
         List<RoleDefinition> definitions = List.of(
                 new RoleDefinition("COMPANY_ADMIN", "Şirket Yöneticisi", DataScope.COMPANY,
-                        EnumSet.allOf(PermissionCode.class)),
-                new RoleDefinition("HR", "İnsan Kaynakları", DataScope.COMPANY, HR_PERMISSIONS),
-                new RoleDefinition("GENERAL_MANAGER", "Genel Müdür", DataScope.COMPANY, READ_PERMISSIONS),
-                new RoleDefinition("DEPARTMENT_MANAGER", "Departman Yöneticisi", DataScope.DEPARTMENT, READ_PERMISSIONS),
-                new RoleDefinition("INTERVIEWER", "Görüşmeci", DataScope.ASSIGNED, INTERVIEWER_PERMISSIONS));
+                        EnumSet.allOf(PermissionCode.class)));
         Map<String, Role> roles = new HashMap<>();
         for (RoleDefinition definition : definitions) {
             Role role = Role.builder().company(company).code(definition.code()).name(definition.name())
-                    .description(definition.name() + " sistem rolü.").dataScope(definition.scope()).build();
+                    .description(definition.name() + " sistem rolü.").dataScope(definition.scope())
+                    .systemRole(true).build();
             definition.permissions().forEach(code -> role.assignPermission(permissions.get(code)));
             roles.put(definition.code(), roleRepository.save(role));
         }

@@ -6,6 +6,7 @@ public record CandidateNoteResponseDto(
         Long id,
         Long candidateId,
         Long candidateProcessId,
+        String entryType,
         String content,
         Long createdBy,
         Instant createdAt,

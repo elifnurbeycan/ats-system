@@ -57,6 +57,38 @@ public class CandidateNoteController {
         ));
     }
 
+    @PostMapping("/evaluations")
+    public ResponseEntity<ApiResponse<CandidateNoteResponseDto>> createEvaluation(
+            @PathVariable Long companyId, @PathVariable Long candidateId,
+            @Valid @RequestBody CreateCandidateNoteRequestDto request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(
+                "Aday değerlendirmesi oluşturuldu.",
+                candidateNoteService.createEvaluation(companyId, candidateId, request)));
+    }
+
+    @GetMapping("/evaluations")
+    public ResponseEntity<ApiResponse<PageResponse<CandidateNoteResponseDto>>> getEvaluations(
+            @PathVariable Long companyId, @PathVariable Long candidateId,
+            @RequestParam(required = false) Long candidateProcessId,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(candidateNoteService.getEvaluations(companyId, candidateId, candidateProcessId, page, size)));
+    }
+
+    @PutMapping("/evaluations/{evaluationId}")
+    public ResponseEntity<ApiResponse<CandidateNoteResponseDto>> updateEvaluation(
+            @PathVariable Long companyId, @PathVariable Long candidateId, @PathVariable Long evaluationId,
+            @Valid @RequestBody UpdateCandidateNoteRequestDto request) {
+        return ResponseEntity.ok(ApiResponse.success("Aday değerlendirmesi güncellendi.",
+                candidateNoteService.updateEvaluation(companyId, candidateId, evaluationId, request)));
+    }
+
+    @PatchMapping("/evaluations/{evaluationId}/deactivate")
+    public ResponseEntity<ApiResponse<CandidateNoteResponseDto>> deactivateEvaluation(
+            @PathVariable Long companyId, @PathVariable Long candidateId, @PathVariable Long evaluationId) {
+        return ResponseEntity.ok(ApiResponse.success("Aday değerlendirmesi pasifleştirildi.",
+                candidateNoteService.deactivateEvaluation(companyId, candidateId, evaluationId)));
+    }
+
     // Aday notunun metin içeriğini günceller.
     @PutMapping("/{noteId}")
     public ResponseEntity<ApiResponse<CandidateNoteResponseDto>> update(

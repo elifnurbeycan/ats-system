@@ -71,11 +71,33 @@ public class AuthServiceImpl implements AuthService {
     // Access token kimliklerini kullanarak güncel kullanıcı profilini getirir.
     @Override
     public AuthenticatedUserResponseDto getCurrentUser(Jwt jwt) {
-        Long userId = ((Number) jwt.getClaim("userId")).longValue();
-        Long companyId = ((Number) jwt.getClaim("companyId")).longValue();
-        User user = userRepository.findWithDetailsByCompanyIdAndId(companyId, userId)
-                .filter(User::isActive)
-                .orElseThrow(() -> new UnauthorizedException("Oturum kullanıcısı bulunamadı."));
+        Number userIdClaim = jwt.getClaim("userId");
+        Number companyIdClaim = jwt.getClaim("companyId");
+        if (jwtProperties.keycloakRequired() && (userIdClaim == null || companyIdClaim == null)) {
+            throw new UnauthorizedException("Keycloak kullanıcı eşleştirmesi eksik.");
+        }
+        User user;
+        if (userIdClaim != null && companyIdClaim != null) {
+            user = userRepository.findWithDetailsByCompanyIdAndId(
+                            companyIdClaim.longValue(), userIdClaim.longValue())
+                    .filter(User::isActive)
+                    .orElseThrow(() -> new UnauthorizedException("Oturum kullanıcısı bulunamadı."));
+        } else if (jwtProperties.keycloakRequired()) {
+            String subject = jwt.getSubject();
+            if (subject == null || subject.isBlank()) {
+                throw new UnauthorizedException("Keycloak kullanıcı kimliği bulunamadı.");
+            }
+            user = userRepository.findByKeycloakUserIdAndActiveTrue(subject)
+                    .orElseThrow(() -> new UnauthorizedException("Keycloak kullanıcısı ATS kullanıcısıyla eşleştirilemedi."));
+        } else {
+            String email = jwt.getClaimAsString("email");
+            if (email == null || email.isBlank()) {
+                throw new UnauthorizedException("Oturum kullanıcı kimliği bulunamadı.");
+            }
+            user = userRepository.findFirstByEmailIgnoreCase(email)
+                    .filter(User::isActive)
+                    .orElseThrow(() -> new UnauthorizedException("Oturum kullanıcısı bulunamadı."));
+        }
         return toUserResponse(user);
     }
 
