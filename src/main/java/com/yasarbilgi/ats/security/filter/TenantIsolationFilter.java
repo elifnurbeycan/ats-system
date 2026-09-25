@@ -67,6 +67,6 @@ public class TenantIsolationFilter extends OncePerRequestFilter {
             var user = userRepository.findByKeycloakUserIdAndActiveTrue(subject);
             if (user.isPresent()) return user.get().getCompany().getId();
         }
-        return authentication.getToken().getClaim("companyId");
+        return null;
     }
 }

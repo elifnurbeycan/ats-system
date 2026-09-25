@@ -4,6 +4,7 @@ import com.yasarbilgi.ats.audit.entity.AuditLog;
 import com.yasarbilgi.ats.audit.service.AuditLogService;
 import com.yasarbilgi.ats.audit.service.AuditPayloadSanitizer;
 import com.yasarbilgi.ats.common.ratelimit.service.ClientIpResolver;
+import com.yasarbilgi.ats.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ public class AuditMutationAspect {
     private final AuditPayloadSanitizer sanitizer;
     private final HttpServletRequest request;
     private final ClientIpResolver clientIpResolver;
+    private final UserRepository userRepository;
 
     @Around("within(com.yasarbilgi.ats..controller..*) && " +
             "(@annotation(org.springframework.web.bind.annotation.PostMapping) || " +
@@ -63,9 +65,11 @@ public class AuditMutationAspect {
         Long actorUserId = null;
         String actorReference = authentication == null ? "system" : authentication.getName();
         if (authentication instanceof JwtAuthenticationToken jwt) {
-            Number userId = jwt.getToken().getClaim("userId");
-            actorUserId = userId == null ? null : userId.longValue();
             actorReference = jwt.getToken().getSubject();
+            if (actorReference != null) {
+                actorUserId = userRepository.findByKeycloakUserIdAndActiveTrue(actorReference)
+                        .map(user -> user.getId()).orElse(null);
+            }
         }
 
         int status = result instanceof ResponseEntity<?> response ? response.getStatusCode().value() : 200;

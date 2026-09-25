@@ -55,8 +55,6 @@ public class DataScopeService {
 
     // JWT içindeki güncel kullanıcı kimliğini getirir.
     public Long getCurrentUserId() {
-        Number userId = jwt().getToken().getClaim("userId");
-        if (userId != null) return userId.longValue();
         return currentUser().map(User::getId)
                 .orElseThrow(() -> new ForbiddenException("Oturum kullanıcı kimliği bulunamadı."));
     }
@@ -65,11 +63,6 @@ public class DataScopeService {
     public Set<Long> getManagedDepartmentIds() {
         if (hasCompanyScope()) return Set.of();
         Set<Long> ids = new HashSet<>();
-        Object claim = jwt().getToken().getClaim("managedDepartmentIds");
-        if (claim instanceof Collection<?> values) {
-            values.stream().filter(Number.class::isInstance).map(Number.class::cast)
-                    .map(Number::longValue).forEach(ids::add);
-        }
         // Özel roller dahil DEPARTMENT kapsamındaki kullanıcıların ana departmanı
         // ve açık yönetici görevlendirmeleri erişim kapsamına dahildir.
         if (hasDepartmentScope()) {
@@ -129,10 +122,6 @@ public class DataScopeService {
             Optional<User> keycloakUser = userRepository.findByKeycloakUserIdAndActiveTrue(subject);
             if (keycloakUser.isPresent()) return keycloakUser;
         }
-        Number userId = jwt().getToken().getClaim("userId");
-        Number companyId = jwt().getToken().getClaim("companyId");
-        if (userId == null || companyId == null) return Optional.empty();
-        return userRepository.findWithDetailsByCompanyIdAndId(companyId.longValue(), userId.longValue())
-                .filter(User::isActive);
+        return Optional.empty();
     }
 }

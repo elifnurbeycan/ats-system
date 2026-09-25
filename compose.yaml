@@ -18,21 +18,6 @@ services:
       timeout: 5s
       retries: 15
 
-  redis:
-    image: redis:7.4-alpine
-    container_name: ats-redis
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:6379:6379"
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - ats-redis-data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
   mailpit:
     image: axllent/mailpit:latest
     container_name: ats-mailpit
@@ -72,5 +57,4 @@ services:
       - keycloak-db
 volumes:
   ats-postgres-data:
-  ats-redis-data:
   ats-keycloak-db-data:

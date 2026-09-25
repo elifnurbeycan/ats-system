@@ -7,6 +7,9 @@ import com.yasarbilgi.ats.permission.entity.Permission;
 import com.yasarbilgi.ats.permission.entity.PermissionCategory;
 import com.yasarbilgi.ats.permission.entity.PermissionCode;
 import com.yasarbilgi.ats.permission.repository.PermissionRepository;
+import com.yasarbilgi.ats.user.entity.User;
+import com.yasarbilgi.ats.user.entity.UserStatus;
+import com.yasarbilgi.ats.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +31,7 @@ class RoleManagementIntegrationTests {
     @Autowired MockMvc mockMvc;
     @Autowired CompanyRepository companyRepository;
     @Autowired PermissionRepository permissionRepository;
+    @Autowired UserRepository userRepository;
 
     private Long companyId;
 
@@ -37,6 +41,9 @@ class RoleManagementIntegrationTests {
                 .name("Dynamic Role Test").code("dynamic-role-test-" + System.nanoTime())
                 .status(CompanyStatus.ACTIVE).build());
         companyId = company.getId();
+        userRepository.save(User.builder().company(company).firstName("Role").lastName("Admin")
+                .email("role-admin-" + companyId + "@example.test")
+                .keycloakUserId("role-test-admin-" + companyId).status(UserStatus.ACTIVE).build());
         permissionRepository.save(Permission.builder().code(PermissionCode.CANDIDATE_VIEW)
                 .name("Aday görüntüleme").category(PermissionCategory.CANDIDATE)
                 .systemPermission(true).displayOrder(1).build());
@@ -52,7 +59,7 @@ class RoleManagementIntegrationTests {
                  "permissions":["CANDIDATE_VIEW","CANDIDATE_CREATE"]}
                 """;
         String response = mockMvc.perform(post("/api/v1/companies/{companyId}/roles", companyId)
-                        .with(jwt().jwt(token -> token.claim("companyId", companyId))
+                        .with(jwt().jwt(token -> token.subject("role-test-admin-" + companyId))
                                 .authorities(new SimpleGrantedAuthority("ROLE_COMPANY_ADMIN")))
                         .contentType(MediaType.APPLICATION_JSON).content(createBody))
                 .andExpect(status().isCreated())
@@ -67,7 +74,7 @@ class RoleManagementIntegrationTests {
                  "permissions":["CANDIDATE_VIEW"]}
                 """;
         mockMvc.perform(put("/api/v1/companies/{companyId}/roles/{roleId}", companyId, roleId)
-                        .with(jwt().jwt(token -> token.claim("companyId", companyId))
+                        .with(jwt().jwt(token -> token.subject("role-test-admin-" + companyId))
                                 .authorities(new SimpleGrantedAuthority("ROLE_COMPANY_ADMIN")))
                         .contentType(MediaType.APPLICATION_JSON).content(updateBody))
                 .andExpect(status().isOk())
@@ -76,7 +83,7 @@ class RoleManagementIntegrationTests {
                 .andExpect(jsonPath("$.data.permissions.length()").value(1));
 
         mockMvc.perform(patch("/api/v1/companies/{companyId}/roles/{roleId}/deactivate", companyId, roleId)
-                        .with(jwt().jwt(token -> token.claim("companyId", companyId))
+                        .with(jwt().jwt(token -> token.subject("role-test-admin-" + companyId))
                                 .authorities(new SimpleGrantedAuthority("ROLE_COMPANY_ADMIN"))))
                 .andExpect(status().isOk());
     }

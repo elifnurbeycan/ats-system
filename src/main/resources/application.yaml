@@ -14,16 +14,6 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-      connect-timeout: ${REDIS_CONNECT_TIMEOUT:1s}
-      timeout: ${REDIS_TIMEOUT:1s}
-      repositories:
-        enabled: false
-
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:587}
@@ -65,19 +55,10 @@ cors:
 security:
   login-protection:
     trust-forwarded-headers: ${LOGIN_TRUST_FORWARDED_HEADERS:false}
-    ip-failure-limit: ${LOGIN_IP_FAILURE_LIMIT:10}
-    ip-window-seconds: ${LOGIN_IP_WINDOW_SECONDS:300}
-    account-failure-limit: ${LOGIN_ACCOUNT_FAILURE_LIMIT:5}
-    account-window-seconds: ${LOGIN_ACCOUNT_WINDOW_SECONDS:900}
   platform-admin:
     full-name: ${PLATFORM_ADMIN_FULL_NAME:Super Admin}
     email: ${PLATFORM_ADMIN_EMAIL:}
   jwt:
-    secret: ${JWT_SECRET}
-    issuer: ${JWT_ISSUER:ats-system}
-    access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:15}
-    refresh-token-days: ${JWT_REFRESH_TOKEN_DAYS:30}
-    # Productionda Keycloak issuer'ı ve audience'ı zorunlu hale getirin.
     keycloak-issuer: ${KEYCLOAK_ISSUER:}
     keycloak-audience: ${KEYCLOAK_AUDIENCE:}
     keycloak-required: ${KEYCLOAK_REQUIRED:true}

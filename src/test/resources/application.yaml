@@ -17,7 +17,5 @@ cors:
 
 security:
   jwt:
-    secret: test-secret-key-with-at-least-32-characters
-    issuer: ats-system-test
-    access-token-minutes: 15
-    refresh-token-days: 30
+    keycloak-issuer: http://localhost:8081/realms/ats
+    keycloak-audience: ats-backend

@@ -13,6 +13,7 @@ import com.yasarbilgi.ats.pipeline.entity.RecruitmentPipeline;
 import com.yasarbilgi.ats.pipeline.repository.RecruitmentPipelineRepository;
 import com.yasarbilgi.ats.position.entity.*;
 import com.yasarbilgi.ats.position.repository.PositionRepository;
+import com.yasarbilgi.ats.security.service.DataScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -20,18 +21,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service @RequiredArgsConstructor @Transactional(readOnly=true)
 public class ContactLeadServiceImpl implements ContactLeadService {
- private final CompanyRepository companyRepository; private final PositionRepository positionRepository; private final RecruitmentPipelineRepository pipelineRepository; private final ContactLeadRepository repository; private final CandidateProcessService candidateProcessService;
+ private final CompanyRepository companyRepository; private final PositionRepository positionRepository; private final RecruitmentPipelineRepository pipelineRepository; private final ContactLeadRepository repository; private final CandidateProcessService candidateProcessService; private final DataScopeService dataScopeService;
  @Override @Transactional public ContactLeadResponse create(Long companyId, CreateContactLeadRequest request) {
   Company company=companyRepository.findById(companyId).filter(Company::isActive).orElseThrow(()->new ResourceNotFoundException("Şirket bulunamadı."));
   Position position=positionRepository.findByCompanyIdAndId(companyId,request.positionId()).filter(Position::isActive).filter(p->p.getStatus()==PositionStatus.OPEN).orElseThrow(()->new BusinessRuleException("Yalnızca açık pozisyonlar için iletişim kaydı oluşturulabilir."));
+  dataScopeService.requireDepartmentAccess(position.getDepartment().getId());
   RecruitmentPipeline pipeline=pipelineRepository.findByCompanyIdAndId(companyId,request.pipelineId()).filter(RecruitmentPipeline::isActive).orElseThrow(()->new ResourceNotFoundException("Pipeline bulunamadı."));
   String linkedin=normalize(request.linkedinUrl());
   if(linkedin!=null&&repository.existsByCompanyIdAndLinkedinUrlAndPositionIdAndStatusAndActiveTrue(companyId,linkedin,position.getId(),ContactLeadStatus.CONTACTING)) throw new BusinessRuleException("Bu kişi aynı pozisyon için zaten iletişim havuzunda.");
   return map(repository.save(ContactLead.builder().company(company).firstName(request.firstName().trim()).lastName(request.lastName().trim()).linkedinUrl(linkedin).position(position).pipeline(pipeline).status(ContactLeadStatus.CONTACTING).build()));
  }
- @Override public PageResponse<ContactLeadResponse> getAll(Long companyId,String search,ContactLeadStatus status,ContactRejectionReason rejectionReason,int page,int size){ if(page<0||size<1||size>ApplicationContract.MAX_PAGE_SIZE)throw new BusinessRuleException("Geçersiz sayfalama bilgisi."); return PageResponse.from(repository.search(companyId,status,rejectionReason,normalize(search),PageRequest.of(page,size,Sort.by(Sort.Direction.DESC,"createdAt"))),this::map); }
+ @Override public PageResponse<ContactLeadResponse> getAll(Long companyId,String search,ContactLeadStatus status,ContactRejectionReason rejectionReason,int page,int size){ if(page<0||size<1||size>ApplicationContract.MAX_PAGE_SIZE)throw new BusinessRuleException("Geçersiz sayfalama bilgisi."); var pageable=PageRequest.of(page,size,Sort.by(Sort.Direction.DESC,"createdAt")); var departmentIds=dataScopeService.getManagedDepartmentIds(); Page<ContactLead> leads; if(dataScopeService.hasCompanyScope()) leads=repository.search(companyId,status,rejectionReason,normalize(search),pageable); else if(departmentIds.isEmpty()) leads=Page.empty(pageable); else leads=repository.searchByDepartments(companyId,departmentIds,status,rejectionReason,normalize(search),pageable); return PageResponse.from(leads,this::map); }
  @Override @Transactional public ContactLeadResponse resolve(Long companyId,Long leadId,ResolveContactLeadRequest request){
   ContactLead lead=repository.findByCompanyIdAndId(companyId,leadId).filter(ContactLead::isActive).orElseThrow(()->new ResourceNotFoundException("İletişim adayı bulunamadı."));
+  dataScopeService.requireDepartmentAccess(lead.getPosition().getDepartment().getId());
   if(lead.getStatus()!=ContactLeadStatus.CONTACTING)throw new BusinessRuleException("Bu iletişim kaydı daha önce sonuçlandırılmış."); String note=normalize(request.note());
   switch(request.resolution()){case WAITING->lead.markWaiting(request.channel(),note);case REJECTED->{if(request.rejectionReason()==null)throw new BusinessRuleException("Ret nedeni zorunludur.");lead.reject(request.channel(),request.rejectionReason(),note);}case POSITIVE->{var process=candidateProcessService.create(companyId,new CreateCandidateProcessRequestDto(lead.getFirstName(),lead.getLastName(),lead.getLinkedinUrl(),lead.getPosition().getId(),lead.getPipeline().getId()));lead.convert(request.channel(),note,process.id());}}
   return map(lead);

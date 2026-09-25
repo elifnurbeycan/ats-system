@@ -17,17 +17,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByCompanyIdAndEmailIgnoreCase(Long companyId, String email);
 
     @EntityGraph(attributePaths = {"company", "department", "roles", "roles.permissions"})
-    Optional<User> findFirstByEmailIgnoreCase(String email);
-
-    @EntityGraph(attributePaths = {"company", "department", "roles", "roles.permissions"})
     Optional<User> findByKeycloakUserIdAndActiveTrue(String keycloakUserId);
-
-    // Kullanıcıyı şirket kodu, e-posta ve rol bilgileriyle giriş işlemi için getirir.
-    @EntityGraph(attributePaths = {"company", "department", "roles"})
-    Optional<User> findByCompanyCodeIgnoreCaseAndEmailIgnoreCase(
-            String companyCode,
-            String email
-    );
 
     boolean existsByCompanyIdAndEmailIgnoreCase(Long companyId, String email);
 

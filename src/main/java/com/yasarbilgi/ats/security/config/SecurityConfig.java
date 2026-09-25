@@ -1,6 +1,5 @@
 package com.yasarbilgi.ats.security.config;
 
-import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.yasarbilgi.ats.security.converter.JwtAuthoritiesConverter;
 import com.yasarbilgi.ats.security.filter.TenantIsolationFilter;
 import com.yasarbilgi.ats.security.filter.DepartmentDataScopeFilter;
@@ -11,9 +10,10 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.JwtClaimValidator;
@@ -21,9 +21,6 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Configuration
@@ -52,7 +49,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/platform/**", "/api/v1/auth/platform/me")
                         .hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/auth/me").authenticated()
-                        .requestMatchers("/api/v1/auth/**", "/actuator/health").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/companies/*/audit-logs/**")
                         .hasAuthority("AUDIT_VIEW")
@@ -193,12 +190,6 @@ public class SecurityConfig {
                 .build();
     }
 
-    // Kullanıcı şifrelerini BCrypt ile doğrulayan encoder'ı oluşturur.
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
     // JWT rol ve permission claim değerlerini authentication nesnesine aktarır.
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter(JwtAuthoritiesConverter authoritiesConverter) {
@@ -207,52 +198,22 @@ public class SecurityConfig {
         return converter;
     }
 
-    // Access token imzalamak için HMAC tabanlı JWT encoder oluşturur.
     @Bean
-    public JwtEncoder jwtEncoder(JwtProperties properties) {
-        return new NimbusJwtEncoder(new ImmutableSecret<>(secretKey(properties)));
-    }
-
-    // Gelen access tokenları imza, süre ve issuer bilgisiyle doğrular.
-    @Bean
-    public JwtDecoder jwtDecoder(
-            JwtProperties properties
-    ) {
-        NimbusJwtDecoder legacyDecoder = NimbusJwtDecoder.withSecretKey(secretKey(properties)).build();
-        legacyDecoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(properties.issuer()));
-
-        String keycloakIssuer = properties.keycloakIssuer();
-        if (properties.keycloakRequired() && (keycloakIssuer == null || keycloakIssuer.isBlank())) {
-            throw new IllegalStateException("KEYCLOAK_ISSUER, Keycloak zorunlu modda boş bırakılamaz.");
+    public JwtDecoder jwtDecoder(JwtProperties properties) {
+        String issuer = properties.keycloakIssuer();
+        if (issuer == null || issuer.isBlank()) {
+            throw new IllegalStateException("KEYCLOAK_ISSUER boş bırakılamaz.");
         }
-        if (keycloakIssuer == null || keycloakIssuer.isBlank()) return legacyDecoder;
-
-        JwtDecoder keycloakDecoder = JwtDecoders.fromIssuerLocation(keycloakIssuer);
-        if (!properties.keycloakAudience().isBlank() && keycloakDecoder instanceof NimbusJwtDecoder nimbusDecoder) {
-            OAuth2TokenValidator<Jwt> issuerValidator = JwtValidators.createDefaultWithIssuer(keycloakIssuer);
-            OAuth2TokenValidator<Jwt> audienceValidator = new JwtClaimValidator<List<String>>(
-                    "aud",
-                    audiences -> audiences != null && audiences.contains(properties.keycloakAudience())
-            );
-            nimbusDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(issuerValidator, audienceValidator));
+        String audience = properties.keycloakAudience();
+        if (audience == null || audience.isBlank()) {
+            throw new IllegalStateException("KEYCLOAK_AUDIENCE boş bırakılamaz.");
         }
-        if (properties.keycloakRequired()) return keycloakDecoder;
-
-        return token -> {
-            try {
-                return keycloakDecoder.decode(token);
-            } catch (JwtException keycloakException) {
-                // Geçiş döneminde daha önce üretilen ATS tokenlarını da kabul et.
-                return legacyDecoder.decode(token);
-            }
-        };
-    }
-
-    // Yapılandırmadaki en az 32 karakterli sırrı HMAC anahtarına dönüştürür.
-    private SecretKey secretKey(JwtProperties properties) {
-        if (properties.secret() == null || properties.secret().length() < 32) {
-            throw new IllegalStateException("JWT_SECRET en az 32 karakter olmalıdır.");
-        }
-        return new SecretKeySpec(properties.secret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(
+                issuer.replaceAll("/+$", "") + "/protocol/openid-connect/certs").build();
+        OAuth2TokenValidator<Jwt> issuerValidator = JwtValidators.createDefaultWithIssuer(issuer);
+        OAuth2TokenValidator<Jwt> audienceValidator = new JwtClaimValidator<List<String>>(
+                "aud", audiences -> audiences != null && audiences.contains(audience));
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(issuerValidator, audienceValidator));
+        return decoder;
     }
 }
