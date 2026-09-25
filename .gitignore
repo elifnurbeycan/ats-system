@@ -39,3 +39,4 @@ build/
 
 ### Local uploaded files ###
 /data/uploads/
+database/*.dump
