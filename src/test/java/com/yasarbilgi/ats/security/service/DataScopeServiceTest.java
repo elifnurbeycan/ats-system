@@ -2,7 +2,9 @@ package com.yasarbilgi.ats.security.service;
 
 import com.yasarbilgi.ats.company.entity.Company;
 import com.yasarbilgi.ats.company.entity.CompanyStatus;
+import com.yasarbilgi.ats.common.exception.ForbiddenException;
 import com.yasarbilgi.ats.department.entity.Department;
+import com.yasarbilgi.ats.department.entity.DepartmentManagerAssignment;
 import com.yasarbilgi.ats.department.repository.DepartmentManagerAssignmentRepository;
 import com.yasarbilgi.ats.role.entity.DataScope;
 import com.yasarbilgi.ats.role.entity.Role;
@@ -24,6 +26,8 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -66,11 +70,71 @@ class DataScopeServiceTest {
         assertThat(service.getCurrentUserId()).isEqualTo(30L);
     }
 
+    @Test
+    void companyScopedRoleCanAccessWholeCompanyWithoutDepartmentIds() {
+        authenticateWithAuthorities("company-admin", "ROLE_COMPANY_ADMIN");
+        DataScopeService service = new DataScopeService(userRepository, assignmentRepository);
+
+        assertThat(service.hasCompanyScope()).isTrue();
+        assertThat(service.getManagedDepartmentIds()).isEmpty();
+        verifyNoInteractions(assignmentRepository);
+    }
+
+    @Test
+    void departmentScopeIncludesOwnAndActiveAssignmentsOnly() {
+        Company company = Company.builder().id(1L).name("Company").code("company")
+                .status(CompanyStatus.ACTIVE).build();
+        Department ownDepartment = Department.builder().id(10L).company(company)
+                .name("Java").code("JAVA").build();
+        Department assignedDepartment = Department.builder().id(11L).company(company)
+                .name("Mali İşler").code("MALI").build();
+        Department inactiveDepartment = Department.builder().id(12L).company(company)
+                .name("Pasif").code("PASIF").build();
+        inactiveDepartment.deactivate();
+        Role manager = Role.builder().code("DEPARTMENT_MANAGER").name("Ekip lideri")
+                .dataScope(DataScope.DEPARTMENT).build();
+        User user = User.builder().id(30L).company(company).firstName("Department")
+                .lastName("Manager").email("manager@example.test").keycloakUserId("department-manager")
+                .department(ownDepartment).roles(Set.of(manager)).build();
+        DepartmentManagerAssignment activeAssignment = DepartmentManagerAssignment.builder()
+                .company(company).department(assignedDepartment).user(user).startedAt(Instant.now()).build();
+        DepartmentManagerAssignment inactiveAssignment = DepartmentManagerAssignment.builder()
+                .company(company).department(inactiveDepartment).user(user).startedAt(Instant.now()).build();
+
+        when(userRepository.findByKeycloakUserIdAndActiveTrue("department-manager"))
+                .thenReturn(Optional.of(user));
+        when(assignmentRepository.findAllByCompanyIdAndUserIdAndActiveTrue(1L, 30L))
+                .thenReturn(List.of(activeAssignment, inactiveAssignment));
+        authenticate("department-manager");
+
+        DataScopeService service = new DataScopeService(userRepository, assignmentRepository);
+
+        assertThat(service.getManagedDepartmentIds()).containsExactlyInAnyOrder(10L, 11L);
+    }
+
+    @Test
+    void unauthenticatedScopeAccessIsForbidden() {
+        DataScopeService service = new DataScopeService(userRepository, assignmentRepository);
+
+        assertThatThrownBy(service::hasCompanyScope).isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(service::getManagedDepartmentIds).isInstanceOf(ForbiddenException.class);
+    }
+
     private void authenticate(String subject) {
         Instant now = Instant.now();
         Jwt jwt = new Jwt("token", now, now.plusSeconds(300),
                 java.util.Map.of("alg", "none"), java.util.Map.of("sub", subject));
         SecurityContextHolder.getContext().setAuthentication(
                 new JwtAuthenticationToken(jwt, java.util.List.of()));
+    }
+
+    private void authenticateWithAuthorities(String subject, String... authorities) {
+        Instant now = Instant.now();
+        Jwt jwt = new Jwt("token", now, now.plusSeconds(300),
+                java.util.Map.of("alg", "none"), java.util.Map.of("sub", subject));
+        SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt,
+                java.util.Arrays.stream(authorities)
+                        .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new)
+                        .toList()));
     }
 }
