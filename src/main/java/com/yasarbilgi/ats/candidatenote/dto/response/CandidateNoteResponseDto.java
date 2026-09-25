@@ -6,6 +6,8 @@ public record CandidateNoteResponseDto(
         Long id,
         Long candidateId,
         Long candidateProcessId,
+        Long pipelineStageId,
+        String pipelineStageName,
         String entryType,
         String content,
         Long createdBy,

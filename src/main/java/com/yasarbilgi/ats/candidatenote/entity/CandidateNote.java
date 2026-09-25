@@ -2,6 +2,7 @@ package com.yasarbilgi.ats.candidatenote.entity;
 
 import com.yasarbilgi.ats.candidate.entity.Candidate;
 import com.yasarbilgi.ats.candidateprocess.entity.CandidateProcess;
+import com.yasarbilgi.ats.pipeline.entity.PipelineStage;
 import com.yasarbilgi.ats.common.base.TenantBaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -41,6 +42,10 @@ public class CandidateNote extends TenantBaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "candidate_process_id")
     private CandidateProcess candidateProcess;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pipeline_stage_id")
+    private PipelineStage pipelineStage;
 
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;

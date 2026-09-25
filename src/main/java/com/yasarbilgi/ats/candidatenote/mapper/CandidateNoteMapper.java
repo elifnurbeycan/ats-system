@@ -11,5 +11,7 @@ public interface CandidateNoteMapper {
     // Aday notunu aday ve süreç kimlikleriyle API yanıtına dönüştürür.
     @Mapping(target = "candidateId", source = "candidate.id")
     @Mapping(target = "candidateProcessId", source = "candidateProcess.id")
+    @Mapping(target = "pipelineStageId", source = "pipelineStage.id")
+    @Mapping(target = "pipelineStageName", source = "pipelineStage.name")
     CandidateNoteResponseDto toResponseDto(CandidateNote note);
 }
