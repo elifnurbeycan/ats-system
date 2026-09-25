@@ -8,6 +8,8 @@ ATS Backend; çok şirketli aday takip ve işe alım süreçlerini yöneten, Spr
 
 ![ATS Keycloak giriş ekranı](docs/screenshots/keycloak-giris.png)
 
+Uygulamanın kontrol paneli, adaylar, iletişim, pozisyonlar ve rol yönetimi ekranlarından oluşan; kişisel alanları maskelenmiş görsel galeri frontend deposunun [README dosyasında](https://github.com/elifnurbeycan/ats-system-frontend#uygulama-ekranları) bulunur.
+
 ## Öne çıkan özellikler
 
 - Çok şirketli (multi-tenant) veri modeli
