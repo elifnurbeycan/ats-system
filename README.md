@@ -1,129 +1,128 @@
-# ATS System Backend
+# ATS Backend
 
-ATS System; adayların, ilk iletişim kayıtlarının, başvuruların, departmanların, pozisyonların ve işe alım pipeline'larının yönetilmesini sağlayan rol ve yetki bazlı bir Applicant Tracking System backend uygulamasıdır.
+ATS Backend; çok şirketli aday takip ve işe alım süreçlerini yöneten, Spring Boot tabanlı REST API uygulamasıdır. Adaylar, ilk temas kayıtları, pozisyonlar, departmanlar, işe alım akışları, görüşmeler ve değerlendirmeler tek bir veri modeli üzerinde yönetilir. Kimlik doğrulama Keycloak ile, yetkilendirme ise rol, izin, şirket ve departman kapsamı birlikte değerlendirilerek uygulanır.
 
-Frontend repository:  
-https://github.com/elifnurbeycan/ats-system-frontend
+> Frontend deposu: [elifnurbeycan/ats-system-frontend](https://github.com/elifnurbeycan/ats-system-frontend)
 
-## Özellikler
+## Keycloak giriş teması
 
-- JWT tabanlı kimlik doğrulama
-- Rol ve izin bazlı yetkilendirme
-- Çok şirketli veri yapısı
-- Aday ve başvuru yönetimi
-- İlk iletişim havuzu
-- İletişim ret nedenleri ve notları
-- Departman ve pozisyon yönetimi
-- Özelleştirilebilir pipeline ve aşamalar
-- Aday süreç geçmişi
-- Audit log kayıtları
-- CV yükleme ve indirme
-- Sayfalama, filtreleme ve sıralama
-- Dashboard ve raporlama servisleri
-- Excel dışa aktarma desteği
-- E-posta bildirimleri
-- Rate limiting ve brute-force koruması
-- Merkezi exception yönetimi
-- Soft-delete ve arşivleme desteği
+![ATS Keycloak giriş ekranı](docs/screenshots/keycloak-giris.png)
 
-## Kullanılan Teknolojiler
+## Öne çıkan özellikler
 
-- Java 21
-- Spring Boot 3.5.16
-- Spring Web
-- Spring Security
-- OAuth2 Resource Server
-- Spring Data JPA
-- Spring Validation
-- Spring AOP
-- Spring Mail
-- Spring Actuator
-- PostgreSQL 17
-- Flyway
-- Redis
-- JWT
-- MapStruct
-- Lombok
-- Maven
+- Çok şirketli (multi-tenant) veri modeli
+- Şirket ve departman bazlı veri izolasyonu
+- Keycloak OIDC/JWT kimlik doğrulaması
+- Rol ve ayrıntılı izin tabanlı yetkilendirme
+- Aday, özgeçmiş, not, etkileşim ve takip yönetimi
+- İlk temas havuzu ve aday sürecine aktarım
+- Pozisyon, departman ve departman yöneticisi yönetimi
+- Özelleştirilebilir işe alım akışları ve aşama geçmişi
+- Görüşme, değerlendirme ve ücret bilgisi yönetimi
+- Kontrol paneli metrikleri ve raporlama endpoint'leri
+- Değiştirilemez denetim kayıtları
+- Flyway ile sürümlü veritabanı migrasyonları
+- ATS arayüzüyle uyumlu özel Keycloak giriş teması
+
+## Teknoloji yığını
+
+| Alan                      | Teknoloji                                         |
+| ------------------------- | ------------------------------------------------- |
+| Dil                       | Java 21                                           |
+| Uygulama çatısı           | Spring Boot 3.5.16                                |
+| Güvenlik                  | Spring Security, OAuth2 Resource Server, Keycloak |
+| Veri erişimi              | Spring Data JPA, Hibernate                        |
+| Veritabanı                | PostgreSQL 17                                     |
+| Migrasyon                 | Flyway                                            |
+| Nesne eşleme              | MapStruct                                         |
+| E-posta geliştirme ortamı | Mailpit                                           |
+| Test                      | JUnit 5, Spring Boot Test, MockMvc, H2            |
+| Derleme                   | Maven Wrapper                                     |
+
+## Mimari
+
+```mermaid
+flowchart LR
+    FE[ATS Frontend] -->|OIDC + PKCE| KC[Keycloak]
+    FE -->|Bearer JWT| API[Spring Boot API]
+    API --> SEC[Security filters]
+    SEC --> SVC[Service katmanı]
+    SVC --> JPA[Repository katmanı]
+    JPA --> DB[(PostgreSQL)]
+    API --> FS[(CV dosya alanı)]
+    API --> MP[SMTP / Mailpit]
+```
+
+Katmanlı paket yapısı her iş alanını controller, service, repository, entity ve DTO bileşenleriyle ayırır:
+
+```text
+src/main/java/com/yasarbilgi/ats/
+├── auth, security, permission, role, user
+├── company, department, position
+├── candidate, candidatenote, candidateprocess
+├── contactlead, interaction, interview, followup
+├── pipeline, dashboard, audit, attachment
+└── common, notification
+```
+
+## Güvenlik modeli
+
+İstek güvenliği yalnızca frontend görünürlüğüne bırakılmaz. Backend her istekte aşağıdaki kapsamları doğrular:
+
+1. Keycloak tarafından imzalanan JWT'nin issuer ve gerekirse audience bilgisi doğrulanır.
+2. `TenantIsolationFilter`, URL'deki `companyId` ile oturum sahibinin şirketini eşleştirir.
+3. `DepartmentDataScopeFilter`, departman kapsamlı kullanıcıların başka departmanlara erişmesini engeller.
+4. `DataScopeService`, servis ve sorgu katmanında erişilebilir departmanları merkezi olarak hesaplar.
+5. Endpoint ve işlemler rol/izin kurallarıyla korunur.
+
+Ek güvenlik önlemleri:
+
+- Yerel parola hash'leri V25 migrasyonuyla kaldırılmıştır; kullanıcı parolaları Keycloak'ta tutulur.
+- Platform yöneticisi ve şirket kullanıcısı alanları birbirinden ayrıdır.
+- CORS origin listesi ortam değişkeniyle sınırlandırılır.
+- Kimlik doğrulama ve erişim hataları ortak JSON biçiminde döndürülür.
+- Hassas alanlar denetim kaydına yazılmadan önce temizlenir.
+- CV yüklemeleri 6 MB ile sınırlandırılır ve yapılandırılabilir bir klasörde saklanır.
+- Gerçek `.env` ve `application-dev.yaml` dosyaları Git'e dahil edilmez.
 
 ## Gereksinimler
 
 - JDK 21
-- PostgreSQL 17
-- Maven 3.9 veya Maven Wrapper
+- Docker Desktop ve Docker Compose
 - Git
-- İsteğe bağlı olarak Redis
-- İsteğe bağlı olarak Docker ve Mailpit
 
-## Repository'yi Klonlama
+Maven'ın ayrıca kurulması gerekmez; depodaki Maven Wrapper kullanılabilir.
+
+## Hızlı başlangıç
+
+### 1. Depoyu klonlayın
 
 ```powershell
 git clone https://github.com/elifnurbeycan/ats-system.git
 cd ats-system
 ```
 
-## Veritabanı Oluşturma
-
-PostgreSQL kurulumu `SQL_ASCII` template kullanıyorsa UTF-8 veritabanı doğrudan oluşturulamayabilir. Bu nedenle veritabanı `template0` üzerinden oluşturulmalıdır:
+### 2. Docker ortamını hazırlayın
 
 ```powershell
-& "C:\Program Files\PostgreSQL\17\bin\createdb.exe" `
-  -h localhost `
-  -p 5432 `
-  -U postgres `
-  -T template0 `
-  -E UTF8 `
-  ats_system
+Copy-Item .env.example .env
 ```
 
-Alternatif SQL komutu:
-
-```sql
-CREATE DATABASE ats_system
-    WITH
-    OWNER = postgres
-    TEMPLATE = template0
-    ENCODING = 'UTF8';
-```
-
-Veritabanı kodlamasını kontrol etmek için:
+`.env` içindeki `change-me` değerlerini güçlü ve benzersiz parolalarla değiştirin. Ardından altyapı servislerini başlatın:
 
 ```powershell
-& "C:\Program Files\PostgreSQL\17\bin\psql.exe" `
-  -h localhost `
-  -p 5432 `
-  -U postgres `
-  -d postgres `
-  -c "\l ats_system"
+docker compose up -d
+docker compose ps
 ```
 
-## Geliştirme Veritabanını Geri Yükleme
+| Servis       | Yerel adres/port                               | Amaç                      |
+| ------------ | ---------------------------------------------- | ------------------------- |
+| PostgreSQL   | `localhost:55432`                              | ATS veritabanı            |
+| Keycloak     | [http://localhost:8081](http://localhost:8081) | Kimlik ve erişim yönetimi |
+| Mailpit SMTP | `localhost:1025`                               | Geliştirme e-postaları    |
+| Mailpit UI   | [http://localhost:8025](http://localhost:8025) | E-posta önizleme          |
 
-Repository içerisinde anonimleştirilmiş geliştirme veritabanı bulunmaktadır:
-
-```text
-database/ats_system_seed.dump
-```
-
-Yedeği geri yüklemek için:
-
-```powershell
-& "C:\Program Files\PostgreSQL\17\bin\pg_restore.exe" `
-  -h localhost `
-  -p 5432 `
-  -U postgres `
-  -d ats_system `
-  --no-owner `
-  --no-privileges `
-  -v `
-  ".\database\ats_system_seed.dump"
-```
-
-Bu yedek gerçek parola, token, audit log, CV dosyası veya kişisel aday bilgisi içermez.
-
-## Yerel Konfigürasyon
-
-Örnek geliştirme konfigürasyonunu kopyalayın:
+### 3. Uygulama profilini oluşturun
 
 ```powershell
 Copy-Item `
@@ -131,139 +130,130 @@ Copy-Item `
   src/main/resources/application-dev.yaml
 ```
 
-`application-dev.yaml` içerisindeki PostgreSQL bağlantı bilgilerini kendi ortamınıza göre düzenleyin:
+Docker Compose kullanıyorsanız `application-dev.yaml` içindeki datasource değerlerini aşağıdaki şekilde güncelleyin:
 
 ```yaml
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/ats_system
+    url: jdbc:postgresql://localhost:55432/ats_system
     username: postgres
-    password: POSTGRESQL_PAROLANIZ
+    password: .env-dosyasindaki-POSTGRES_PASSWORD
 ```
 
-`application-dev.yaml` yerel parola içerebileceği için GitHub'a gönderilmemelidir.
+`application-dev.yaml` yalnızca yerel kullanım içindir ve commit edilmemelidir.
 
-## Uygulamayı Çalıştırma
+### 4. Keycloak'u yapılandırın
 
-Maven Wrapper ile:
+Yeni bir Docker volume ile ilk kez başlatıyorsanız Keycloak yönetim panelinde aşağıdaki temel yapılandırmayı oluşturun:
+
+- Realm: `ats`
+- Public frontend client: `ats-frontend`
+- Standard Flow / Authorization Code: açık
+- PKCE: `S256`
+- Valid redirect URI: `http://localhost:3000/*`
+- Web origin: `http://localhost:3000`
+- Realm rolleri: ihtiyaca göre `SUPER_ADMIN`, `COMPANY_ADMIN`, `HR`, `RECRUITER`, `GENERAL_MANAGER`, `DEPARTMENT_MANAGER`, `HIRING_MANAGER`, `INTERVIEWER`
+
+Özel giriş görünümü için realm login theme değerini `ats-login` seçin. Tema dosyaları `keycloak/themes/ats-login` altında tutulur ve Compose tarafından read-only bağlanır.
+
+Backend üzerinden Keycloak kullanıcı yönetimi gerekmiyorsa Admin API entegrasyonunu kapalı bırakın:
+
+```dotenv
+KEYCLOAK_ADMIN_API_ENABLED=false
+```
+
+Etkinleştirilecekse yalnızca backend'e ait confidential client kullanın; client secret hiçbir zaman frontend'e veya Git'e yazılmamalıdır.
+
+### 5. Backend'i çalıştırın
 
 ```powershell
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
-Sistemde Maven kuruluysa:
+API [http://localhost:8080](http://localhost:8080), sağlık kontrolü ise [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health) adresinde yayınlanır.
 
-```powershell
-mvn spring-boot:run "-Dspring-boot.run.profiles=dev"
-```
+## Yapılandırma
 
-Backend varsayılan olarak aşağıdaki adreste çalışır:
+Başlıca ortam değişkenleri:
 
-```text
-http://localhost:8080
-```
+| Değişken                      | Açıklama                           | Yerel örnek                                    |
+| ----------------------------- | ---------------------------------- | ---------------------------------------------- |
+| `SPRING_DATASOURCE_URL`       | PostgreSQL JDBC adresi             | `jdbc:postgresql://localhost:55432/ats_system` |
+| `SPRING_DATASOURCE_USERNAME`  | Veritabanı kullanıcısı             | `postgres`                                     |
+| `SPRING_DATASOURCE_PASSWORD`  | Veritabanı parolası                | gizli değer                                    |
+| `KEYCLOAK_ISSUER`             | Kabul edilen JWT issuer            | `http://localhost:8081/realms/ats`             |
+| `KEYCLOAK_AUDIENCE`           | Beklenen API audience              | yerelde isteğe bağlı                           |
+| `KEYCLOAK_REQUIRED`           | Keycloak zorunluluğu               | `true`                                         |
+| `CORS_ALLOWED_ORIGINS`        | İzin verilen frontend origin'leri  | `http://localhost:3000`                        |
+| `ATS_CV_STORAGE_PATH`         | CV dosyalarının saklandığı dizin   | `./data/uploads/cv`                            |
+| `MAIL_HOST`, `MAIL_PORT`      | SMTP bağlantısı                    | `localhost`, `1025`                            |
+| `MANAGER_REVIEW_MAIL_ENABLED` | Yönetici değerlendirme e-postaları | `false`                                        |
+| `FRONTEND_BASE_URL`           | E-postalardaki frontend tabanı     | `http://localhost:3000`                        |
 
-## Testleri Çalıştırma
+Üretimde tüm sırlar ortam değişkeni veya bir secret manager üzerinden verilmelidir.
 
-Maven Wrapper ile:
+## API grupları
 
-```powershell
-.\mvnw.cmd clean test
-```
+Tüm tenant endpoint'leri şirket kimliğini URL içinde taşır: `/api/v1/companies/{companyId}/...`
 
-Maven ile:
+| Endpoint grubu                                   | Amaç                                       |
+| ------------------------------------------------ | ------------------------------------------ |
+| `/api/v1/auth`                                   | Oturum kullanıcısı ve eşleştirme bilgileri |
+| `/api/v1/auth/platform`                          | Platform yöneticisi oturum bilgileri       |
+| `/api/v1/platform/companies`                     | Platform düzeyinde şirket yönetimi         |
+| `/departments`, `/positions`, `/users`, `/roles` | Organizasyon ve erişim yönetimi            |
+| `/candidates`, `/candidates/{id}/cv`             | Aday ve özgeçmiş yönetimi                  |
+| `/candidates/{id}/notes`                         | Aday notları ve aşama değerlendirmeleri    |
+| `/contact-leads`                                 | İlk temas havuzu                           |
+| `/pipelines`, `/candidate-processes`             | İşe alım akışları ve süreçler              |
+| `/interviews`, `/interactions`, `/follow-ups`    | Görüşme ve iletişim kayıtları              |
+| `/dashboard`                                     | Kontrol paneli metrikleri                  |
+| `/audit-logs`                                    | Denetim kayıtları                          |
 
-```powershell
-mvn clean test
-```
+## Veritabanı migrasyonları
 
-## Mailpit ile E-posta Testi
-
-Mailpit container'ını çalıştırın:
-
-```powershell
-docker run --name ats-mailpit -d `
-  -p 1025:1025 `
-  -p 8025:8025 `
-  axllent/mailpit
-```
-
-Mailpit arayüzü:
-
-```text
-http://localhost:8025
-```
-
-SMTP bağlantısı:
-
-```text
-Host: localhost
-Port: 1025
-```
-
-Daha önce oluşturulmuş container'ı yeniden çalıştırmak için:
-
-```powershell
-docker start ats-mailpit
-```
-
-## Yerel Portlar
-
-| Servis | Port |
-|---|---:|
-| Frontend | `3000` |
-| Backend | `8080` |
-| PostgreSQL | `5432` |
-| Mailpit SMTP | `1025` |
-| Mailpit arayüzü | `8025` |
-
-## Proje Yapısı
+Flyway migrasyonları `src/main/resources/db/migration` altında bulunur ve uygulama açılışında otomatik doğrulanıp uygulanır. Şema değişikliği yaparken mevcut migration dosyalarını değiştirmek yerine yeni, sıralı bir migration ekleyin.
 
 ```text
-src/main/java/com/yasarbilgi/ats/
-├── auth/               Kimlik doğrulama
-├── candidate/          Aday işlemleri
-├── candidateprocess/   Başvuru ve süreç yönetimi
-├── communication/      İlk iletişim yönetimi
-├── department/         Departman yönetimi
-├── position/           Pozisyon yönetimi
-├── pipeline/           Pipeline ve aşama yönetimi
-├── dashboard/          Dashboard ve raporlama
-├── audit/              Audit kayıtları
-├── security/           Güvenlik yapılandırmaları
-├── common/             Ortak sınıflar ve exception yönetimi
-├── company/            Şirket yönetimi
-├── role/               Rol yönetimi
-├── permission/         İzin yönetimi
-└── user/               Kullanıcı yönetimi
-
-src/main/resources/
-├── db/migration/       Flyway migration dosyaları
-├── application.yaml
-├── application-dev.example.yaml
-└── application-dev.yaml
+V1__create_core_schema.sql
+...
+V26__add_candidate_note_pipeline_stage.sql
 ```
 
-## Güvenlik Notları
+## Testler
 
-- Gerçek parolalar ve token'lar repository'ye eklenmemelidir.
-- `application-dev.yaml` Git tarafından takip edilmemelidir.
-- Yetki kontrolleri yalnızca frontend'e bırakılmamalıdır.
-- Üretim ortamında JWT anahtarları ve veritabanı parolaları environment variable veya secret manager üzerinden sağlanmalıdır.
-- Üretim ortamında dosya depolama ve e-posta ayarları ayrıca yapılandırılmalıdır.
+```powershell
+.\mvnw.cmd test
+```
 
-## Commit Standardı
+Test paketi; uygulama bağlamı, JWT rol dönüşümü, tenant izolasyonu, departman veri kapsamı ve rol yönetimi entegrasyonlarını kapsar. Testler H2 bellek içi veritabanıyla çalışır; yerel PostgreSQL verisini değiştirmez.
+
+## Production kontrol listesi
+
+- `KEYCLOAK_REQUIRED=true` kullanın.
+- `KEYCLOAK_ISSUER` ve `KEYCLOAK_AUDIENCE` değerlerini production adresleriyle sınırlandırın.
+- Yalnızca gerçek frontend origin'lerini `CORS_ALLOWED_ORIGINS` içine alın.
+- Docker örnek parolalarını değiştirin ve repoya göndermeyin.
+- Keycloak Admin API gerekiyorsa en az yetkili confidential client kullanın.
+- TLS'yi reverse proxy veya platform katmanında zorunlu tutun.
+- CV saklama alanını yedekleyin ve dosya sistemi izinlerini sınırlandırın.
+- Actuator endpoint'lerini dış ağa doğrudan açmayın.
+- Veritabanı ve Keycloak volume'ları için düzenli yedek alın.
+
+## Commit standardı
+
+Proje Conventional Commits biçimini kullanır:
 
 ```text
 feat: yeni özellik
 fix: hata düzeltmesi
-refactor: davranışı değiştirmeyen kod düzenlemesi
-docs: dokümantasyon değişikliği
+refactor: davranışı değiştirmeyen yeniden düzenleme
 test: test ekleme veya güncelleme
-build: bağımlılık veya build değişikliği
-chore: bakım işlemi
+docs: dokümantasyon değişikliği
+build: derleme ya da bağımlılık değişikliği
+chore: bakım çalışması
 ```
 
-## Proje Durumu
+## Proje durumu
 
 Proje aktif olarak geliştirilmektedir.
