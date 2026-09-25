@@ -37,14 +37,14 @@ class TenantApiSecurityIntegrationTests {
                 .andExpect(jsonPath("$.status").value(403));
     }
 
-    // Token ve URL şirketi eşleştiğinde isteğin güvenlik filtresini geçip controller'a ulaştığını doğrular.
+    // Yalnızca token claim'iyle şirket eşleşmesi yapılamaz; ATS kullanıcı kaydı gerekir.
     @Test
-    void shouldAllowMatchingCompanyAccess() throws Exception {
+    void shouldRejectMatchingCompanyClaimWithoutLocalUser() throws Exception {
         mockMvc.perform(get("/api/v1/companies/1/roles")
                         .with(jwt().jwt(token -> token.claim("companyId", 1L))
                                 .authorities(new SimpleGrantedAuthority("USER_VIEW"))))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value(404));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403));
     }
 
     // Şirket doğru olsa bile gerekli permission bulunmayan isteğin reddedildiğini doğrular.
@@ -68,22 +68,22 @@ class TenantApiSecurityIntegrationTests {
                 .andExpect(jsonPath("$.status").value(403));
     }
 
-    // Şirket kapsamındaki İK kullanıcısının departman filtresine takılmadığını doğrular.
+    // ATS kaydı bulunmayan JWT içindeki İK rolü tenant erişimi vermez.
     @Test
-    void shouldAllowCompanyScopedRoleToReachCandidateProcess() throws Exception {
+    void shouldRejectForgedCompanyScopedRoleWithoutLocalUser() throws Exception {
         mockMvc.perform(get("/api/v1/companies/1/candidate-processes/99")
                         .with(jwt().jwt(token -> token.claim("companyId", 1L))
                                 .authorities(new SimpleGrantedAuthority("ROLE_HR"),
                                         new SimpleGrantedAuthority("CANDIDATE_PROCESS_VIEW"))))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    void shouldAllowDepartmentDeactivateWithRequiredPermission() throws Exception {
+    void shouldRejectDepartmentDeactivateWithoutLocalUser() throws Exception {
         mockMvc.perform(patch("/api/v1/companies/1/departments/99/deactivate")
                         .with(jwt().jwt(token -> token.claim("companyId", 1L))
                                 .authorities(new SimpleGrantedAuthority("ROLE_HR"),
                                         new SimpleGrantedAuthority("DEPARTMENT_DEACTIVATE"))))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 }

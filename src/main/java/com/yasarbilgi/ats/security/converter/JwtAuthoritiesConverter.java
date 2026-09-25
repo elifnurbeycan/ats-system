@@ -1,5 +1,6 @@
 package com.yasarbilgi.ats.security.converter;
 
+import com.yasarbilgi.ats.company.entity.CompanyStatus;
 import com.yasarbilgi.ats.permission.entity.PermissionCode;
 import com.yasarbilgi.ats.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class JwtAuthoritiesConverter implements Converter<Jwt, Collection<Grante
             // veritabanıdır. Keycloak kullanıcı attribute'larından gelen claim'ler
             // yetki yükseltmek amacıyla kullanılamaz.
             var user = atsUser.get();
+            if (user.getCompany().getStatus() != CompanyStatus.ACTIVE) return authorities;
             user.getRoles().forEach(role -> roles.add(role.getCode()));
             user.getRoles().stream().flatMap(role -> role.getPermissions().stream())
                     .filter(permission -> permission.isActive())
@@ -62,10 +64,4 @@ public class JwtAuthoritiesConverter implements Converter<Jwt, Collection<Grante
         return values.stream().filter(Objects::nonNull).map(Object::toString).toList();
     }
 
-    // Çok değerli JWT claim alanını güvenli bir String listesine dönüştürür.
-    private Collection<String> getStringClaim(Jwt jwt, String claimName) {
-        Object claim = jwt.getClaim(claimName);
-        if (!(claim instanceof Collection<?> values)) return List.of();
-        return values.stream().filter(Objects::nonNull).map(Object::toString).toList();
-    }
 }
