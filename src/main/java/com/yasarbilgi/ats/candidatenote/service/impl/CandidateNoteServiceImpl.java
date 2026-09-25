@@ -11,6 +11,8 @@ import com.yasarbilgi.ats.candidatenote.repository.CandidateNoteRepository;
 import com.yasarbilgi.ats.candidatenote.service.CandidateNoteService;
 import com.yasarbilgi.ats.candidateprocess.entity.CandidateProcess;
 import com.yasarbilgi.ats.candidateprocess.repository.CandidateProcessRepository;
+import com.yasarbilgi.ats.pipeline.entity.PipelineStage;
+import com.yasarbilgi.ats.pipeline.repository.PipelineStageRepository;
 import com.yasarbilgi.ats.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ public class CandidateNoteServiceImpl implements CandidateNoteService {
 
     private final CandidateRepository candidateRepository;
     private final CandidateProcessRepository candidateProcessRepository;
+    private final PipelineStageRepository pipelineStageRepository;
     private final CandidateNoteRepository candidateNoteRepository;
     private final CandidateNoteMapper candidateNoteMapper;
 
@@ -52,6 +55,7 @@ public class CandidateNoteServiceImpl implements CandidateNoteService {
                 .company(candidate.getCompany())
                 .candidate(candidate)
                 .candidateProcess(process)
+                .pipelineStage(resolveStage(companyId, process, request.pipelineStageId()))
                 .entryType("NOTE")
                 .content(request.content().trim())
                 .build();
@@ -64,8 +68,10 @@ public class CandidateNoteServiceImpl implements CandidateNoteService {
     public CandidateNoteResponseDto createEvaluation(Long companyId, Long candidateId, CreateCandidateNoteRequestDto request) {
         Candidate candidate = getCandidate(companyId, candidateId);
         CandidateProcess process = getCandidateProcess(companyId, candidateId, request.candidateProcessId());
+        PipelineStage stage = resolveStage(companyId, process, request.pipelineStageId());
         CandidateNote evaluation = CandidateNote.builder()
                 .company(candidate.getCompany()).candidate(candidate).candidateProcess(process)
+                .pipelineStage(stage)
                 .entryType("EVALUATION").content(request.content().trim()).build();
         return candidateNoteMapper.toResponseDto(candidateNoteRepository.save(evaluation));
     }
@@ -199,5 +205,13 @@ public class CandidateNoteServiceImpl implements CandidateNoteService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Aday notu bulunamadı: " + noteId
                 ));
+    }
+
+    private PipelineStage resolveStage(Long companyId, CandidateProcess process, Long stageId) {
+        if (stageId == null) return null;
+        if (process == null) throw new BusinessRuleException("Aşama seçebilmek için aday başvurusu seçilmelidir.");
+        return pipelineStageRepository.findByCompanyIdAndPipelineIdAndId(
+                        companyId, process.getPipeline().getId(), stageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Seçilen işe alım aşaması bulunamadı: " + stageId));
     }
 }

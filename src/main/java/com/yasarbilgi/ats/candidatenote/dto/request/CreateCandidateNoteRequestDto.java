@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Size;
 
 public record CreateCandidateNoteRequestDto(
         Long candidateProcessId,
+        Long pipelineStageId,
         @NotBlank @Size(max = 5000) String content
 ) {
 }
