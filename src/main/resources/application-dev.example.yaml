@@ -4,7 +4,7 @@ spring:
       on-profile: dev
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/ats_system
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/ats_system
     username: postgres
     password: CHANGE_ME
 
@@ -23,13 +23,22 @@ logging:
     org.hibernate.SQL: DEBUG
 
 security:
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    reset-password-per-15-minutes: ${RATE_LIMIT_RESET_PASSWORD:5}
+    user-creation-per-hour: ${RATE_LIMIT_USER_CREATION:20}
+    company-creation-per-hour: ${RATE_LIMIT_COMPANY_CREATION:10}
+    cv-upload-per-10-minutes: ${RATE_LIMIT_CV_UPLOAD:20}
+    export-per-minute: ${RATE_LIMIT_EXPORT:20}
+    write-per-minute: ${RATE_LIMIT_WRITE:120}
+    read-per-minute: ${RATE_LIMIT_READ:600}
   platform-admin:
     full-name: ${PLATFORM_ADMIN_FULL_NAME:Super Admin}
     email: ${PLATFORM_ADMIN_EMAIL:}
+    require-local-allowlist: ${PLATFORM_ADMIN_REQUIRE_LOCAL_ALLOWLIST:false}
   jwt:
-    keycloak-issuer: http://localhost:8081/realms/ats
-    keycloak-audience: ""
-    keycloak-required: true
+    keycloak-issuer: ${KEYCLOAK_ISSUER:http://localhost:8081/realms/ats}
+    keycloak-audience: ${KEYCLOAK_AUDIENCE:ats-backend}
   keycloak:
     admin:
       enabled: ${KEYCLOAK_ADMIN_API_ENABLED:false}

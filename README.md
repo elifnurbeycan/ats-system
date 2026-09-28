@@ -132,12 +132,12 @@ Copy-Item `
   src/main/resources/application-dev.yaml
 ```
 
-Docker Compose kullanıyorsanız `application-dev.yaml` içindeki datasource değerlerini aşağıdaki şekilde güncelleyin:
+Yerel PostgreSQL servisini kullanıyorsanız `application-dev.yaml` varsayılan olarak `ats_system` veritabanının 5432 portuna bağlanır. Docker Compose PostgreSQL'i kullanacaksanız portu 55432 olarak override edin:
 
 ```yaml
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:55432/ats_system
+    url: jdbc:postgresql://localhost:5432/ats_system
     username: postgres
     password: .env-dosyasindaki-POSTGRES_PASSWORD
 ```
@@ -180,13 +180,16 @@ Başlıca ortam değişkenleri:
 
 | Değişken                      | Açıklama                           | Yerel örnek                                    |
 | ----------------------------- | ---------------------------------- | ---------------------------------------------- |
-| `SPRING_DATASOURCE_URL`       | PostgreSQL JDBC adresi             | `jdbc:postgresql://localhost:55432/ats_system` |
+| `SPRING_DATASOURCE_URL`       | PostgreSQL JDBC adresi             | `jdbc:postgresql://localhost:5432/ats_system` |
 | `SPRING_DATASOURCE_USERNAME`  | Veritabanı kullanıcısı             | `postgres`                                     |
 | `SPRING_DATASOURCE_PASSWORD`  | Veritabanı parolası                | gizli değer                                    |
 | `KEYCLOAK_ISSUER`             | Kabul edilen JWT issuer            | `http://localhost:8081/realms/ats`             |
-| `KEYCLOAK_AUDIENCE`           | Beklenen API audience              | yerelde isteğe bağlı                           |
-| `KEYCLOAK_REQUIRED`           | Keycloak zorunluluğu               | `true`                                         |
+| `KEYCLOAK_AUDIENCE`           | Beklenen API audience              | `ats-backend`                                  |
 | `CORS_ALLOWED_ORIGINS`        | İzin verilen frontend origin'leri  | `http://localhost:3000`                        |
+| `RATE_LIMIT_ENABLED`          | API istek sınırlandırmasını açar   | `true`                                         |
+| `RATE_LIMIT_WRITE`            | Kullanıcı başına dakikalık yazma   | `120`                                          |
+| `RATE_LIMIT_READ`             | Kullanıcı başına dakikalık okuma   | `600`                                          |
+| `PLATFORM_ADMIN_REQUIRE_LOCAL_ALLOWLIST` | Superadmin için yerel onay kaydını zorunlu kılar | `false`                    |
 | `ATS_CV_STORAGE_PATH`         | CV dosyalarının saklandığı dizin   | `./data/uploads/cv`                            |
 | `MAIL_HOST`, `MAIL_PORT`      | SMTP bağlantısı                    | `localhost`, `1025`                            |
 | `MANAGER_REVIEW_MAIL_ENABLED` | Yönetici değerlendirme e-postaları | `false`                                        |
@@ -219,7 +222,7 @@ Flyway migrasyonları `src/main/resources/db/migration` altında bulunur ve uygu
 ```text
 V1__create_core_schema.sql
 ...
-V26__add_candidate_note_pipeline_stage.sql
+V27__deactivate_obsolete_permissions.sql
 ```
 
 ## Testler
@@ -230,10 +233,18 @@ V26__add_candidate_note_pipeline_stage.sql
 
 Test paketi; uygulama bağlamı, JWT rol dönüşümü, tenant izolasyonu, departman veri kapsamı ve rol yönetimi entegrasyonlarını kapsar. Testler H2 bellek içi veritabanıyla çalışır; yerel PostgreSQL verisini değiştirmez.
 
+Gerçek PostgreSQL 17 üzerinde tüm Flyway migration zincirini ve Hibernate şema doğrulamasını çalıştırmak için Docker Desktop açıkken:
+
+```powershell
+.\mvnw.cmd -Ppostgres-integration verify
+```
+
+Bu profil Testcontainers ile geçici bir PostgreSQL veritabanı oluşturur. Yerel `ats_system` veritabanını kullanmaz; test tamamlanınca container ve içindeki veriler kaldırılır.
+
 ## Production kontrol listesi
 
-- `KEYCLOAK_REQUIRED=true` kullanın.
 - `KEYCLOAK_ISSUER` ve `KEYCLOAK_AUDIENCE` değerlerini production adresleriyle sınırlandırın.
+- `PLATFORM_ADMIN_EMAIL` ile onaylı hesabı oluşturduktan sonra `PLATFORM_ADMIN_REQUIRE_LOCAL_ALLOWLIST=true` kullanın.
 - Yalnızca gerçek frontend origin'lerini `CORS_ALLOWED_ORIGINS` içine alın.
 - Docker örnek parolalarını değiştirin ve repoya göndermeyin.
 - Keycloak Admin API gerekiyorsa en az yetkili confidential client kullanın.

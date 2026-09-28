@@ -2,6 +2,8 @@ package com.yasarbilgi.ats.security.converter;
 
 import com.yasarbilgi.ats.company.entity.CompanyStatus;
 import com.yasarbilgi.ats.permission.entity.PermissionCode;
+import com.yasarbilgi.ats.auth.repository.PlatformAdminRepository;
+import com.yasarbilgi.ats.security.config.PlatformAdminProperties;
 import com.yasarbilgi.ats.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.convert.converter.Converter;
@@ -17,6 +19,8 @@ import java.util.*;
 public class JwtAuthoritiesConverter implements Converter<Jwt, Collection<GrantedAuthority>> {
 
     private final UserRepository userRepository;
+    private final PlatformAdminRepository platformAdminRepository;
+    private final PlatformAdminProperties platformAdminProperties;
 
     // JWT içindeki rol ve permission değerlerini Spring Security yetkilerine dönüştürür.
     @Override
@@ -41,7 +45,9 @@ public class JwtAuthoritiesConverter implements Converter<Jwt, Collection<Grante
             // ATS tenant kullanıcısı olmayan hesaplarda yalnızca platform yönetici
             // rolü kabul edilir; diğer realm rolleri tenant API yetkisi sağlamaz.
             Set<String> realmRoles = new HashSet<>(getNestedStringClaim(jwt, "realm_access", "roles"));
-            if (realmRoles.contains("SUPER_ADMIN")) roles.add("SUPER_ADMIN");
+            if (realmRoles.contains("SUPER_ADMIN") && isApprovedPlatformAdmin(jwt)) {
+                roles.add("SUPER_ADMIN");
+            }
         }
         roles.forEach(role ->
                 authorities.add(new SimpleGrantedAuthority("ROLE_" + role)));
@@ -52,6 +58,15 @@ public class JwtAuthoritiesConverter implements Converter<Jwt, Collection<Grante
                     .forEach(authorities::add);
         }
         return authorities;
+    }
+
+    private boolean isApprovedPlatformAdmin(Jwt jwt) {
+        if (!platformAdminProperties.requireLocalAllowlist()) return true;
+        String email = jwt.getClaimAsString("email");
+        return email != null && !email.isBlank()
+                && platformAdminRepository.findByEmailIgnoreCase(email)
+                .filter(admin -> admin.isActive())
+                .isPresent();
     }
 
     private Collection<String> getNestedStringClaim(Jwt jwt, String... path) {

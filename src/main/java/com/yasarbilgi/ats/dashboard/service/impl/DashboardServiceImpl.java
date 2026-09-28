@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,6 +33,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class DashboardServiceImpl implements DashboardService {
+
+    private static final ZoneId REPORTING_ZONE = ZoneId.of("Europe/Istanbul");
 
     private final CompanyRepository companyRepository;
     private final CandidateRepository candidateRepository;
@@ -113,9 +115,9 @@ public class DashboardServiceImpl implements DashboardService {
 
     private List<DashboardResponseDto.MonthlyApplicationTrend> getMonthlyApplicationTrend(
             Long companyId, Instant now, Set<Long> departmentIds) {
-        var currentMonth = now.atZone(ZoneOffset.UTC).withDayOfMonth(1).toLocalDate();
+        var currentMonth = now.atZone(REPORTING_ZONE).withDayOfMonth(1).toLocalDate();
         var firstMonth = currentMonth.minusMonths(11);
-        Instant periodStart = firstMonth.atStartOfDay(ZoneOffset.UTC).toInstant();
+        Instant periodStart = firstMonth.atStartOfDay(REPORTING_ZONE).toInstant();
         var counts = departmentIds == null
                 ? candidateProcessRepository.countApplicationsByMonth(companyId, periodStart)
                 : candidateProcessRepository.countApplicationsByMonthAndDepartmentIds(
@@ -123,14 +125,14 @@ public class DashboardServiceImpl implements DashboardService {
 
         Map<String, Long> countByMonth = new HashMap<>();
         counts.forEach(item -> countByMonth.put(
-                item.getMonthStart().atZone(ZoneOffset.UTC).toLocalDate().withDayOfMonth(1).toString(),
+                item.getMonthStart().atZone(REPORTING_ZONE).toLocalDate().withDayOfMonth(1).toString(),
                 item.getApplicationCount()));
 
         List<DashboardResponseDto.MonthlyApplicationTrend> result = new ArrayList<>();
         for (int index = 0; index < 12; index++) {
             var month = firstMonth.plusMonths(index);
             result.add(new DashboardResponseDto.MonthlyApplicationTrend(
-                    month.atStartOfDay(ZoneOffset.UTC).toInstant(),
+                    month.atStartOfDay(REPORTING_ZONE).toInstant(),
                     countByMonth.getOrDefault(month.toString(), 0L)));
         }
         return result;

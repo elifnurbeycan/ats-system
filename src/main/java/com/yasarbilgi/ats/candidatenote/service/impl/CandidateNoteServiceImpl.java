@@ -13,6 +13,7 @@ import com.yasarbilgi.ats.candidateprocess.entity.CandidateProcess;
 import com.yasarbilgi.ats.candidateprocess.repository.CandidateProcessRepository;
 import com.yasarbilgi.ats.pipeline.entity.PipelineStage;
 import com.yasarbilgi.ats.pipeline.repository.PipelineStageRepository;
+import com.yasarbilgi.ats.security.service.DataScopeService;
 import com.yasarbilgi.ats.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ public class CandidateNoteServiceImpl implements CandidateNoteService {
     private final PipelineStageRepository pipelineStageRepository;
     private final CandidateNoteRepository candidateNoteRepository;
     private final CandidateNoteMapper candidateNoteMapper;
+    private final DataScopeService dataScopeService;
 
     // Aday notunu genel profile veya doğrulanmış aday sürecine bağlayarak oluşturur.
     @Override
@@ -59,6 +61,7 @@ public class CandidateNoteServiceImpl implements CandidateNoteService {
                 .entryType("NOTE")
                 .content(request.content().trim())
                 .build();
+        note.assignCreatedBy(dataScopeService.getCurrentUserId());
 
         return candidateNoteMapper.toResponseDto(candidateNoteRepository.save(note));
     }
@@ -73,6 +76,7 @@ public class CandidateNoteServiceImpl implements CandidateNoteService {
                 .company(candidate.getCompany()).candidate(candidate).candidateProcess(process)
                 .pipelineStage(stage)
                 .entryType("EVALUATION").content(request.content().trim()).build();
+        evaluation.assignCreatedBy(dataScopeService.getCurrentUserId());
         return candidateNoteMapper.toResponseDto(candidateNoteRepository.save(evaluation));
     }
 

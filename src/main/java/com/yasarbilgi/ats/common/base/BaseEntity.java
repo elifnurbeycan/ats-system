@@ -55,6 +55,13 @@ public abstract class BaseEntity {
     )
     private Long createdBy;
 
+    // Oluşturma aktörünü servis katmanının güvenilir oturum kimliğiyle kaydetmesini sağlar.
+    public void assignCreatedBy(Long userId) {
+        if (createdBy == null) {
+            createdBy = userId;
+        }
+    }
+
     @LastModifiedBy
     @Column(name = "updated_by")
     private Long updatedBy;

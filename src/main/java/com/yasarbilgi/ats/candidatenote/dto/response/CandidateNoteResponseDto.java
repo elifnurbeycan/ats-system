@@ -11,6 +11,7 @@ public record CandidateNoteResponseDto(
         String entryType,
         String content,
         Long createdBy,
+        String createdByName,
         Instant createdAt,
         Instant updatedAt,
         boolean active

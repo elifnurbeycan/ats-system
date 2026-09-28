@@ -4,6 +4,7 @@ import com.yasarbilgi.ats.candidate.entity.Candidate;
 import com.yasarbilgi.ats.candidateprocess.entity.CandidateProcess;
 import com.yasarbilgi.ats.pipeline.entity.PipelineStage;
 import com.yasarbilgi.ats.common.base.TenantBaseEntity;
+import com.yasarbilgi.ats.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -46,6 +47,11 @@ public class CandidateNote extends TenantBaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pipeline_stage_id")
     private PipelineStage pipelineStage;
+
+    // created_by audit alanını kullanıcı adıyla birlikte okuyabilmek için salt-okunur ilişki.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by", insertable = false, updatable = false)
+    private User createdByUser;
 
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
