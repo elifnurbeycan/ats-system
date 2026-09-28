@@ -3,6 +3,7 @@ package com.yasarbilgi.ats.security.config;
 import com.yasarbilgi.ats.security.converter.JwtAuthoritiesConverter;
 import com.yasarbilgi.ats.security.filter.TenantIsolationFilter;
 import com.yasarbilgi.ats.security.filter.DepartmentDataScopeFilter;
+import com.yasarbilgi.ats.common.ratelimit.filter.ApiRateLimitFilter;
 import com.yasarbilgi.ats.security.handler.*;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.*;
@@ -20,6 +21,7 @@ import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 
 import java.util.List;
 
@@ -27,12 +29,23 @@ import java.util.List;
 @EnableConfigurationProperties({JwtProperties.class, PlatformAdminProperties.class, KeycloakAdminProperties.class})
 public class SecurityConfig {
 
+    // Filtre yalnızca Spring Security zincirinde çalışmalıdır. Aksi halde servlet
+    // container filtreyi kimlik doğrulamadan önce ikinci kez çalıştırır.
+    @Bean
+    public FilterRegistrationBean<ApiRateLimitFilter> disableContainerRateLimitRegistration(
+            ApiRateLimitFilter filter) {
+        FilterRegistrationBean<ApiRateLimitFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
     // API endpointlerini JWT, tenant ve permission kurallarıyla korur.
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             TenantIsolationFilter tenantIsolationFilter,
             DepartmentDataScopeFilter departmentDataScopeFilter,
+            ApiRateLimitFilter apiRateLimitFilter,
             RestAuthenticationEntryPoint authenticationEntryPoint,
             RestAccessDeniedHandler accessDeniedHandler,
             JwtAuthoritiesConverter authoritiesConverter
@@ -164,8 +177,6 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/companies/*/candidates", "/api/v1/companies/*/candidates/**")
                         .hasAuthority("CANDIDATE_VIEW")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/companies/*/candidates")
-                        .hasAuthority("CANDIDATE_CREATE")
                         .requestMatchers(HttpMethod.POST, "/api/v1/companies/*/candidates/**")
                         .hasAuthority("CANDIDATE_UPDATE")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/companies/*/candidates/**")
@@ -187,6 +198,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler))
                 .addFilterAfter(tenantIsolationFilter, BearerTokenAuthenticationFilter.class)
                 .addFilterAfter(departmentDataScopeFilter, TenantIsolationFilter.class)
+                .addFilterAfter(apiRateLimitFilter, DepartmentDataScopeFilter.class)
                 .build();
     }
 

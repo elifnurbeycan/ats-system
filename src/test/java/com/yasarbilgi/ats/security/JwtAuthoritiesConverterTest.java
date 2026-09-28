@@ -10,6 +10,8 @@ import com.yasarbilgi.ats.role.entity.DataScope;
 import com.yasarbilgi.ats.role.entity.Role;
 import com.yasarbilgi.ats.user.entity.User;
 import com.yasarbilgi.ats.user.repository.UserRepository;
+import com.yasarbilgi.ats.auth.repository.PlatformAdminRepository;
+import com.yasarbilgi.ats.security.config.PlatformAdminProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.jwt.Jwt;
 
@@ -23,7 +25,9 @@ import static org.mockito.Mockito.*;
 
 class JwtAuthoritiesConverterTest {
     private final UserRepository users = mock(UserRepository.class);
-    private final JwtAuthoritiesConverter converter = new JwtAuthoritiesConverter(users);
+    private final PlatformAdminRepository platformAdmins = mock(PlatformAdminRepository.class);
+    private final JwtAuthoritiesConverter converter = new JwtAuthoritiesConverter(
+            users, platformAdmins, new PlatformAdminProperties("Super Admin", "", false));
 
     @Test
     void unprovisionedRealmRoleCannotGrantTenantPermissions() {
@@ -85,6 +89,22 @@ class JwtAuthoritiesConverterTest {
                 .claim("realm_access", Map.of("roles", List.of("HR", "DEPARTMENT_MANAGER"))).build();
 
         assertThat(converter.convert(token)).isEmpty();
+    }
+
+    @Test
+    void localAllowlistCanRejectUnknownPlatformAdmin() {
+        JwtAuthoritiesConverter strictConverter = new JwtAuthoritiesConverter(
+                users, platformAdmins, new PlatformAdminProperties("Super Admin", "", true));
+        when(users.findByKeycloakUserIdAndActiveTrue("unknown-platform-admin"))
+                .thenReturn(Optional.empty());
+        when(platformAdmins.findByEmailIgnoreCase("unknown@example.test"))
+                .thenReturn(Optional.empty());
+        Jwt token = Jwt.withTokenValue("test").header("alg", "none")
+                .subject("unknown-platform-admin")
+                .claim("email", "unknown@example.test")
+                .claim("realm_access", Map.of("roles", List.of("SUPER_ADMIN"))).build();
+
+        assertThat(strictConverter.convert(token)).isEmpty();
     }
 
     @Test

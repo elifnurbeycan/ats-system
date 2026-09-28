@@ -19,6 +19,7 @@ public enum PermissionCode {
     POSITION_STATUS_CHANGE,
 
     CANDIDATE_VIEW,
+    @Deprecated(forRemoval = true)
     CANDIDATE_CREATE,
     CANDIDATE_UPDATE,
 
@@ -31,6 +32,7 @@ public enum PermissionCode {
 
     CONTACT_LEAD_VIEW,
     CONTACT_LEAD_CREATE,
+    @Deprecated(forRemoval = true)
     CONTACT_LEAD_UPDATE,
     CONTACT_LEAD_RESOLVE,
 

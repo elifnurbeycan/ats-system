@@ -47,8 +47,8 @@ class RoleManagementIntegrationTests {
         permissionRepository.save(Permission.builder().code(PermissionCode.CANDIDATE_VIEW)
                 .name("Aday görüntüleme").category(PermissionCategory.CANDIDATE)
                 .systemPermission(true).displayOrder(1).build());
-        permissionRepository.save(Permission.builder().code(PermissionCode.CANDIDATE_CREATE)
-                .name("Aday oluşturma").category(PermissionCategory.CANDIDATE)
+        permissionRepository.save(Permission.builder().code(PermissionCode.CANDIDATE_UPDATE)
+                .name("Aday güncelleme").category(PermissionCategory.CANDIDATE)
                 .systemPermission(true).displayOrder(2).build());
     }
 
@@ -56,7 +56,7 @@ class RoleManagementIntegrationTests {
     void companyAdminCanCreateUpdateAndDeactivateCustomRole() throws Exception {
         String createBody = """
                 {"name":"İşe Alım Uzmanı","description":"Dinamik rol","dataScope":"COMPANY",
-                 "permissions":["CANDIDATE_VIEW","CANDIDATE_CREATE"]}
+                 "permissions":["CANDIDATE_VIEW","CANDIDATE_UPDATE"]}
                 """;
         String response = mockMvc.perform(post("/api/v1/companies/{companyId}/roles", companyId)
                         .with(jwt().jwt(token -> token.subject("role-test-admin-" + companyId))

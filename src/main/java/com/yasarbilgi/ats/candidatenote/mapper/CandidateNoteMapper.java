@@ -13,5 +13,6 @@ public interface CandidateNoteMapper {
     @Mapping(target = "candidateProcessId", source = "candidateProcess.id")
     @Mapping(target = "pipelineStageId", source = "pipelineStage.id")
     @Mapping(target = "pipelineStageName", source = "pipelineStage.name")
+    @Mapping(target = "createdByName", source = "createdByUser.fullName")
     CandidateNoteResponseDto toResponseDto(CandidateNote note);
 }
