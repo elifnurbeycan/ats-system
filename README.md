@@ -119,7 +119,7 @@ docker compose ps
 
 | Servis       | Yerel adres/port                               | Amaç                      |
 | ------------ | ---------------------------------------------- | ------------------------- |
-| PostgreSQL   | `localhost:55432`                              | ATS veritabanı            |
+| PostgreSQL   | `localhost:15432`                              | ATS veritabanı            |
 | Keycloak     | [http://localhost:8081](http://localhost:8081) | Kimlik ve erişim yönetimi |
 | Mailpit SMTP | `localhost:1025`                               | Geliştirme e-postaları    |
 | Mailpit UI   | [http://localhost:8025](http://localhost:8025) | E-posta önizleme          |
@@ -132,7 +132,7 @@ Copy-Item `
   src/main/resources/application-dev.yaml
 ```
 
-Yerel PostgreSQL servisini kullanıyorsanız `application-dev.yaml` varsayılan olarak `ats_system` veritabanının 5432 portuna bağlanır. Docker Compose PostgreSQL'i kullanacaksanız portu 55432 olarak override edin:
+Yerel PostgreSQL servisini kullanıyorsanız `application-dev.yaml` varsayılan olarak `ats_system` veritabanının 5432 portuna bağlanır. Docker Compose PostgreSQL'i kullanacaksanız portu 15432 olarak override edin:
 
 ```yaml
 spring:
@@ -185,7 +185,7 @@ Başlıca ortam değişkenleri:
 | `SPRING_DATASOURCE_PASSWORD`  | Veritabanı parolası                | gizli değer                                    |
 | `KEYCLOAK_ISSUER`             | Kabul edilen JWT issuer            | `http://localhost:8081/realms/ats`             |
 | `KEYCLOAK_AUDIENCE`           | Beklenen API audience              | `ats-backend`                                  |
-| `CORS_ALLOWED_ORIGINS`        | İzin verilen frontend origin'leri  | `http://localhost:3000`                        |
+| `CORS_ALLOWED_ORIGINS`        | İzin verilen frontend origin'leri  | `http://localhost:3000,http://localhost:5173`  |
 | `RATE_LIMIT_ENABLED`          | API istek sınırlandırmasını açar   | `true`                                         |
 | `RATE_LIMIT_WRITE`            | Kullanıcı başına dakikalık yazma   | `120`                                          |
 | `RATE_LIMIT_READ`             | Kullanıcı başına dakikalık okuma   | `600`                                          |
