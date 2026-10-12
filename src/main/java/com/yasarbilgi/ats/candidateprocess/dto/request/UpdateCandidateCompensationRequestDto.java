@@ -9,15 +9,7 @@ import java.math.BigDecimal;
 public record UpdateCandidateCompensationRequestDto(
         @DecimalMin(value = "0.0", inclusive = true)
         @Digits(integer = 17, fraction = 2)
-        BigDecimal currentSalary,
-
-        @DecimalMin(value = "0.0", inclusive = true)
-        @Digits(integer = 17, fraction = 2)
         BigDecimal expectedSalary,
-
-        @DecimalMin(value = "0.0", inclusive = true)
-        @Digits(integer = 17, fraction = 2)
-        BigDecimal offeredSalary,
 
         @Pattern(
                 regexp = "^[A-Za-z]{3}$",

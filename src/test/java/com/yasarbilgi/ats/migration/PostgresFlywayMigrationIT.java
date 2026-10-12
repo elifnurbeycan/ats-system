@@ -47,12 +47,12 @@ class PostgresFlywayMigrationIT {
     @Test
     void allMigrationsAreAppliedAndHibernateSchemaValidationPasses() {
         assertThat(flyway.info().current()).isNotNull();
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("27");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("28");
         assertThat(flyway.info().pending()).isEmpty();
 
         Integer appliedMigrationCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE success", Integer.class);
-        assertThat(appliedMigrationCount).isEqualTo(27);
+        assertThat(appliedMigrationCount).isEqualTo(28);
     }
 
     @Test
@@ -62,9 +62,9 @@ class PostgresFlywayMigrationIT {
                 .containsExactlyInAnyOrder("companies", "users", "candidates", "candidate_processes",
                         "candidate_cvs", "candidate_contact_leads", "audit_logs", "platform_admins");
 
-        assertThat(columnExists("candidate_processes", "current_salary")).isTrue();
         assertThat(columnExists("candidate_processes", "expected_salary")).isTrue();
-        assertThat(columnExists("candidate_processes", "offered_salary")).isTrue();
+        assertThat(columnExists("candidate_processes", "current_salary")).isFalse();
+        assertThat(columnExists("candidate_processes", "offered_salary")).isFalse();
         assertThat(columnExists("candidates", "current_salary")).isFalse();
         assertThat(columnExists("candidates", "salary_currency")).isFalse();
         assertThat(columnExists("users", "password_hash")).isFalse();

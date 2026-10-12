@@ -73,25 +73,11 @@ public class CandidateProcess extends TenantBaseEntity {
     private PipelineStage currentStage;
 
     @Column(
-            name = "current_salary",
-            precision = 19,
-            scale = 2
-    )
-    private BigDecimal currentSalary;
-
-    @Column(
             name = "expected_salary",
             precision = 19,
             scale = 2
     )
     private BigDecimal expectedSalary;
-
-    @Column(
-            name = "offered_salary",
-            precision = 19,
-            scale = 2
-    )
-    private BigDecimal offeredSalary;
 
     @Column(
             name = "salary_currency",
@@ -101,28 +87,6 @@ public class CandidateProcess extends TenantBaseEntity {
 
     @Column(name = "completed_at")
     private Instant completedAt;
-
-    // Sürece ait mevcut, beklenen ve teklif edilen maaş bilgilerini birlikte günceller.
-    public void updateCompensation(
-            BigDecimal currentSalary,
-            BigDecimal expectedSalary,
-            BigDecimal offeredSalary,
-            String salaryCurrency
-    ) {
-        this.currentSalary = currentSalary;
-        this.expectedSalary = expectedSalary;
-        this.offeredSalary = offeredSalary;
-        this.salaryCurrency = salaryCurrency;
-    }
-
-    // Adayın süreç başlangıcındaki mevcut maaş bilgisini günceller.
-    public void updateCurrentSalary(
-            BigDecimal currentSalary,
-            String salaryCurrency
-    ) {
-        this.currentSalary = currentSalary;
-        this.salaryCurrency = salaryCurrency;
-    }
 
     // Adayı yeni aşamaya taşır ve sürecin tamamlanma zamanını düzenler.
     public void changeStage(PipelineStage newStage) {
@@ -148,12 +112,4 @@ public class CandidateProcess extends TenantBaseEntity {
         this.salaryCurrency = salaryCurrency;
     }
 
-    // Adaya sunulan maaş teklifini günceller.
-    public void updateOfferedSalary(
-            BigDecimal offeredSalary,
-            String salaryCurrency
-    ) {
-        this.offeredSalary = offeredSalary;
-        this.salaryCurrency = salaryCurrency;
-    }
 }
