@@ -242,7 +242,7 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
         return candidateProcessMapper.toCompensationResponseDto(process);
     }
 
-    // Mevcut, beklenen ve teklif edilen maaşı tek işlemde günceller.
+    // Adayın beklenen maaşını ve para birimini günceller.
     @Override
     @Transactional
     public CandidateCompensationResponseDto updateCompensation(
@@ -254,12 +254,7 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
         dataScopeService.requireDepartmentAccess(process.getPosition().getDepartment().getId());
         String currency = resolveCurrency(request);
 
-        process.updateCompensation(
-                request.currentSalary(),
-                request.expectedSalary(),
-                request.offeredSalary(),
-                currency
-        );
+        process.updateExpectedSalary(request.expectedSalary(), currency);
 
         return candidateProcessMapper.toCompensationResponseDto(process);
     }
@@ -332,9 +327,7 @@ public class CandidateProcessServiceImpl implements CandidateProcessService {
 
     // Maaş girilmişse para birimini zorunlu tutar ve büyük harfli biçime getirir.
     private String resolveCurrency(UpdateCandidateCompensationRequestDto request) {
-        boolean hasSalary = request.currentSalary() != null
-                || request.expectedSalary() != null
-                || request.offeredSalary() != null;
+        boolean hasSalary = request.expectedSalary() != null;
 
         if (!hasSalary) {
             return null;
